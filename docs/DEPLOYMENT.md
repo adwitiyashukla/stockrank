@@ -2,6 +2,8 @@
 
 ## Streamlit Community Cloud (free, gives a public URL)
 
+**Deployed at <https://equity-alpha-engine.streamlit.app>.**
+
 The research console renders artifacts from disk, so the repository ships a small
 `demo_artifacts/` bundle that the hosted app reads.
 

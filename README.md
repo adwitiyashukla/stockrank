@@ -6,6 +6,11 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230.svg)](https://github.com/astral-sh/ruff)
+[![Live demo](https://img.shields.io/badge/live%20demo-research%20console-4C8DFF.svg)](https://equity-alpha-engine.streamlit.app)
+
+### [Open the live research console](https://equity-alpha-engine.streamlit.app)
+
+No install required. Signal quality, strategy performance, the significance tests and the latest ranked long/short screen, all rendered from the artifacts this repository produces.
 
 ---
 
@@ -78,6 +83,7 @@ That conclusion is the deliverable. Price and volume features alone carry very l
 ![Information coefficient by fold](reports/figures/baseline/ic_by_fold.png)
 
 Full write-up with every figure: **[reports/RESULTS_baseline.md](reports/RESULTS_baseline.md)**.
+Click through it interactively: **[equity-alpha-engine.streamlit.app](https://equity-alpha-engine.streamlit.app)**.
 
 ---
 
@@ -246,11 +252,15 @@ The suite runs entirely on the synthetic simulator, so it needs no network and p
 
 ## Deploy
 
+The research console is deployed at **[equity-alpha-engine.streamlit.app](https://equity-alpha-engine.streamlit.app)**, served straight from this repository's `demo_artifacts/`.
+
+To run the whole stack locally:
+
 ```bash
 docker compose -f docker/docker-compose.yml up --build     # API on :8000, dashboard on :8501
 ```
 
-The Streamlit console also deploys to Streamlit Community Cloud directly from this repository; point it at `dashboard/app.py` and it reads the committed `demo_artifacts/`. Step by step instructions, plus the API endpoint reference, are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+The Streamlit console deploys to Streamlit Community Cloud directly from this repository; point it at `dashboard/app.py` and it reads the committed `demo_artifacts/`. Step by step instructions, plus the API endpoint reference, are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ---
 
