@@ -1,0 +1,9 @@
+{
+  "n_rows": 952019,
+  "n_tickers": 250,
+  "start": "2010-01-04",
+  "end": "2026-06-29",
+  "n_trading_days": 4146,
+  "n_sectors": 12,
+  "source": "cache"
+}

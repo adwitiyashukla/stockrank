@@ -1,0 +1,13 @@
+{
+  "n_rows": 931373,
+  "n_features": 36,
+  "n_tickers": 250,
+  "start": "2010-03-30",
+  "end": "2026-05-27",
+  "execution_lag_days": 1,
+  "label_type": "forward_excess_return",
+  "label_horizon": 21,
+  "normalisation": "zscore",
+  "rows_dropped_thin_dates": 0,
+  "mean_cross_section": 229.1
+}

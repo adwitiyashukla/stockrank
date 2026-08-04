@@ -1,0 +1,73 @@
+{
+  "best_model": "lightgbm",
+  "deflated_sharpe": {
+    "sharpe_per_period": 0.06684437139466576,
+    "sharpe_annual": 1.0611214995283522,
+    "sr_threshold": 0.05897251582613186,
+    "sr_threshold_annual": 0.9361596663825942,
+    "deflated_sharpe": 0.6228839027387156,
+    "n_trials": 60,
+    "skew": 0.8683800252727248,
+    "kurtosis": 12.407951086623262,
+    "n_obs": 1511
+  },
+  "bootstrap": {
+    "sharpe_ci_low": 0.2930357762244649,
+    "sharpe_ci_high": 1.830134571709332,
+    "p_value_sharpe_le_0": 0.003,
+    "n_bootstrap": 1000
+  },
+  "pbo": {
+    "pbo": 0.02857142857142857,
+    "median_oos_rank": 0.8333333333333334,
+    "n_combinations": 70,
+    "n_strategies": 6
+  },
+  "randomisation": {
+    "actual_ic": 0.012818621297054843,
+    "permutation_p_value": 0.009900990099009901,
+    "n_permutations": 100
+  },
+  "capacity": [
+    {
+      "cost_bps": 0.0,
+      "ann_return": 0.1082545829437582,
+      "sharpe": 1.0611214995283522
+    },
+    {
+      "cost_bps": 2.0,
+      "ann_return": 0.10475410580156752,
+      "sharpe": 1.0262815467703108
+    },
+    {
+      "cost_bps": 5.0,
+      "ann_return": 0.09950339008828146,
+      "sharpe": 0.9739019305489929
+    },
+    {
+      "cost_bps": 10.0,
+      "ann_return": 0.0907521972328047,
+      "sharpe": 0.8863751865854355
+    },
+    {
+      "cost_bps": 15.0,
+      "ann_return": 0.08200100437732794,
+      "sharpe": 0.7987129963083772
+    },
+    {
+      "cost_bps": 20.0,
+      "ann_return": 0.0732498115218512,
+      "sharpe": 0.7110853615872892
+    },
+    {
+      "cost_bps": 30.0,
+      "ann_return": 0.055747425810897686,
+      "sharpe": 0.5365958244805366
+    },
+    {
+      "cost_bps": 50.0,
+      "ann_return": 0.020742654388990672,
+      "sharpe": 0.194976403805993
+    }
+  ]
+}

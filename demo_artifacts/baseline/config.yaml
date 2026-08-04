@@ -1,0 +1,147 @@
+run:
+  name: baseline
+  seed: 42
+  artifacts_dir: artifacts
+  reports_dir: reports
+data:
+  source: yfinance
+  universe: sp500_pit
+  universe_file: configs/universe_custom.txt
+  start: '2010-01-01'
+  end: '2026-06-30'
+  max_assets: 250
+  n_assets: 150
+  cache_dir: data/cache
+  min_price: 5.0
+  min_history_days: 500
+  min_names_per_date: 30
+  benchmark: SPY
+  use_fama_french: true
+simulator:
+  n_sectors: 8
+  ann_market_vol: 0.16
+  ann_idio_vol: 0.28
+  garch_alpha: 0.08
+  garch_beta: 0.9
+  student_t_df: 5
+  momentum_strength: 0.02
+  reversal_strength: 0.015
+  lowvol_strength: 0.01
+  null_alpha: false
+features:
+  return_windows:
+  - 1
+  - 5
+  - 10
+  - 21
+  - 63
+  - 126
+  - 252
+  vol_windows:
+  - 10
+  - 21
+  - 63
+  ma_windows:
+  - 10
+  - 21
+  - 50
+  - 200
+  volume_windows:
+  - 5
+  - 21
+  - 63
+  winsorize_q: 0.01
+  cross_sectional_rank: true
+  standardise: zscore
+label:
+  type: forward_excess_return
+  horizon: 21
+  neutralise_market: false
+  scale_by_volatility: false
+  triple_barrier:
+    upper_sigma: 2.0
+    lower_sigma: 2.0
+    max_holding_days: 10
+validation:
+  scheme: purged_walk_forward
+  n_splits: 6
+  embargo_days: 21
+  train_window_days: 1260
+  test_window_days: 252
+  expanding: false
+models:
+  enabled:
+  - factor_composite
+  - ridge
+  - elasticnet
+  - lightgbm
+  - gru
+  - ensemble
+  factor_composite: {}
+  ridge:
+    alpha: 10.0
+  elasticnet:
+    alpha: 0.001
+    l1_ratio: 0.5
+  lightgbm:
+    n_estimators: 400
+    learning_rate: 0.03
+    num_leaves: 31
+    max_depth: 6
+    min_child_samples: 200
+    subsample: 0.8
+    subsample_freq: 1
+    colsample_bytree: 0.7
+    reg_lambda: 5.0
+    n_jobs: 4
+  gru:
+    sequence_length: 40
+    hidden_size: 64
+    num_layers: 1
+    dropout: 0.2
+    batch_size: 1024
+    epochs: 6
+    lr: 0.001
+    weight_decay: 1.0e-05
+    max_train_sequences: 80000
+    patience: 2
+  ensemble:
+    method: rank_average
+    members:
+    - lightgbm
+    - gru
+    - elasticnet
+    - factor_composite
+volatility:
+  model: garch
+  garch_p: 1
+  garch_q: 1
+  refit_every_days: 126
+  max_assets_fitted: 30
+portfolio:
+  method: rank_long_short
+  n_long: 25
+  n_short: 25
+  gross_leverage: 2.0
+  max_weight: 0.06
+  dollar_neutral: true
+  beta_neutral: true
+  sector_neutral: false
+  vol_target_annual: 0.1
+  vol_lookback_days: 63
+  max_vol_scalar: 2.0
+  rebalance_days: 21
+  mean_variance:
+    risk_aversion: 5.0
+    shrinkage: ledoit_wolf
+    cov_lookback_days: 252
+backtest:
+  initial_capital: 1000000.0
+  cost_bps: 5.0
+  slippage_bps: 2.0
+  borrow_bps_annual: 50.0
+  turnover_cap_daily: 0.25
+evaluation:
+  n_trials_for_deflated_sharpe: 60
+  bootstrap_samples: 1000
+  pbo_splits: 8
