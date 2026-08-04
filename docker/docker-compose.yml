@@ -1,0 +1,35 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: equity-alpha-engine:latest
+    container_name: alpha-api
+    ports: ["8000:8000"]
+    volumes:
+      - ../artifacts:/app/artifacts
+      - ../data:/app/data
+    restart: unless-stopped
+
+  dashboard:
+    image: equity-alpha-engine:latest
+    container_name: alpha-dashboard
+    depends_on: [api]
+    ports: ["8501:8501"]
+    volumes:
+      - ../artifacts:/app/artifacts
+      - ../reports:/app/reports
+    command: >
+      streamlit run dashboard/app.py
+      --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+    restart: unless-stopped
+
+  research:
+    image: equity-alpha-engine:latest
+    container_name: alpha-research
+    profiles: ["research"]
+    volumes:
+      - ../artifacts:/app/artifacts
+      - ../data:/app/data
+      - ../reports:/app/reports
+    command: ["python", "-m", "alpha_engine.cli", "run", "--config", "configs/default.yaml"]
