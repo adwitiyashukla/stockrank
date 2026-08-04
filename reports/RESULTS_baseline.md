@@ -7,6 +7,7 @@
 - **Source**: yfinance, universe `sp500_pit`
 - **Period**: 2010-01-04 to 2026-06-29 (4,146 trading days)
 - **Cross-section**: 250 names, 12 GICS sectors, 952,019 rows
+- **Point-in-time coverage**: 647 of 813 historical index members priced (79.6%). The remainder are delistings and acquisitions that Yahoo Finance no longer serves; this residual survivorship bias is discussed in section 8.
 - **Features**: 36 cross-sectionally normalised factors, target = forward_excess_return over 21 days with a 1-day execution lag
 
 ## 2. Forecast quality
@@ -22,13 +23,13 @@ The information coefficient is the daily cross-sectional Spearman correlation be
 | gru | 0.0073 | 0.7827 | 0.5795 | 0.0054 | -0.0044 | 440.3000 |
 | factor_composite | -0.0127 | -0.8844 | -0.5170 | -0.0089 | -21.7247 | 0.0000 |
 
-![Information coefficient by model](figures\baseline\ic_by_model.png)
+![Information coefficient by model](figures/baseline/ic_by_model.png)
 
 Stability across folds matters more than the average. A signal that is strong in two folds and negative in three is not a signal.
 
-![IC by fold](figures\baseline\ic_by_fold.png)
+![IC by fold](figures/baseline/ic_by_fold.png)
 
-![Quantile ladder](figures\baseline\quantile_ladder.png)
+![Quantile ladder](figures/baseline/quantile_ladder.png)
 
 ## 3. Strategy performance
 
@@ -44,13 +45,13 @@ Construction: rank_long_short, 25 long and 25 short, dollar neutral, gross lever
 | ensemble | -0.002 | 0.091 | -0.024 | -0.035 | -0.221 | -0.010 | -0.060 | 0.077 |
 | benchmark_buy_hold | 0.183 | 0.170 | 1.076 | 1.450 | -0.245 | 0.748 | 2.915 |  |
 
-![Equity curves](figures\baseline\equity_curves.png)
+![Equity curves](figures/baseline/equity_curves.png)
 
-![Drawdown](figures\baseline\drawdown.png)
+![Drawdown](figures/baseline/drawdown.png)
 
-![Rolling Sharpe](figures\baseline\rolling_sharpe.png)
+![Rolling Sharpe](figures/baseline/rolling_sharpe.png)
 
-![Monthly returns](figures\baseline\monthly_returns.png)
+![Monthly returns](figures/baseline/monthly_returns.png)
 
 ## 4. Is the result real?
 
@@ -74,7 +75,7 @@ Regression of daily strategy excess returns on the Fama-French five factors plus
 | gru | -0.034 | -0.988 | 0.123 | 0.109 | 0.098 | 0.083 | -0.011 |
 | ensemble | -0.050 | -1.401 | 0.145 | 0.086 | 0.141 | 0.081 | 0.012 |
 
-![Factor exposures](figures\baseline\factor_exposures.png)
+![Factor exposures](figures/baseline/factor_exposures.png)
 
 ## 5. Implementability
 
@@ -91,11 +92,11 @@ Sharpe ratio as a function of the assumed one-way cost. The break-even point is 
 | 30.000 | 0.056 | 0.537 |
 | 50.000 | 0.021 | 0.195 |
 
-![Cost sensitivity](figures\baseline\cost_sensitivity.png)
+![Cost sensitivity](figures/baseline/cost_sensitivity.png)
 
 ## 6. What the model uses
 
-![Feature importance](figures\baseline\feature_importance.png)
+![Feature importance](figures/baseline/feature_importance.png)
 
 ## 7. Volatility forecasting study
 
@@ -110,13 +111,13 @@ Return levels are close to unpredictable; return variance is not. GARCH(1,1) wit
 | qlike_garch | 1.810432 |
 | mse_garch | 0.000029 |
 
-![Volatility models](figures\baseline\volatility_models.png)
+![Volatility models](figures/baseline/volatility_models.png)
 
 ## 8. Limitations
 
 Stated plainly, because a results document that lists none is not credible.
 
-1. **Residual survivorship bias.** Index membership is reconstructed point in time, but 0% of historical members cannot be priced because Yahoo Finance drops delisted securities. The surviving sample is therefore mildly favourable, and the true out-of-sample edge is likely a little lower than reported.
+1. **Residual survivorship bias.** Index membership is reconstructed point in time, but 20% of historical members cannot be priced because Yahoo Finance drops delisted securities. The surviving sample is therefore mildly favourable, and the true out-of-sample edge is likely a little lower than reported.
 2. **No market impact model.** Costs are linear in turnover. At institutional size, impact is concave in participation rate and would bite harder than a flat basis-point charge.
 3. **Close-to-close execution.** Fills are assumed at the closing price with a one-day lag. Real execution against the close carries auction risk not modelled here.
 4. **Price and volume data only.** No fundamentals, no analyst revisions, no short interest, no options-implied information. Those are the natural next inputs.
@@ -131,4 +132,4 @@ python scripts/fetch_data.py --config configs/baseline.yaml   # or your config
 python -m alpha_engine.cli run --config configs/baseline.yaml
 ```
 
-Wall clock on the reference machine (8 GB RAM, CPU only): data n/as, features n/as, training n/as, backtest 7s, total n/as. Seed `42`.
+Wall clock on the reference machine (8 GB RAM, CPU only): data 0s, features 20s, training 456s, backtest 8s, total 558s. Seed `42`.

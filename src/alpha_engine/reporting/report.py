@@ -106,7 +106,11 @@ def build_report(res, figures_dir: str | Path | None = None) -> Path:
 def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
     cfg: Config = res.cfg
     art = Path(res.dir)
-    rel = lambda p: Path("figures") / cfg.run.name / Path(p).name  # noqa: E731
+    # POSIX separators, always. On Windows a plain Path renders as
+    # "figures\baseline\x.png", which GitHub does not treat as an image path, so
+    # every figure in the committed report would silently fail to display.
+    def rel(p) -> str:
+        return (Path("figures") / cfg.run.name / Path(p).name).as_posix()
 
     lines: list[str] = []
     A = lines.append

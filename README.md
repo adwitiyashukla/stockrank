@@ -71,6 +71,7 @@ Universe of **250 liquid US large caps**, **2010-01-04 to 2026-06-29** (4,146 tr
 - Probability of backtest overfitting: **0.029** (CSCV over 6 candidate strategies)
 - Fama-French six-factor alpha: +6.23% annualised, t = 1.67 under Newey-West errors, R2 = 0.180
 - Net beta is **exactly zero at every rebalance** by construction, against the rolling beta estimates used to build the book. The full-sample regression beta against the S&P 500 is 0.128, and that gap is the residual left by estimation error in rolling betas rather than a deliberate market bet
+- Point-in-time universe coverage: 79.6% (647 of 813 historical index members priced)
 
 **Reading this honestly.** The raw evidence is positive: Sharpe 1.06, Newey-West t of 2.67, bootstrap P(Sharpe <= 0) of 0.003, and a probability of backtest overfitting of 0.029, which is low enough to say the selection process is not simply picking noise. Two things stop this being a claim of significance. The **deflated Sharpe of 0.623** falls short of the conventional 0.95: measured against the 60 configurations tried, the observed Sharpe sits only just above what a worthless strategy would be expected to reach. And the six-factor alpha carries a t-statistic of 1.67, so a meaningful part of the return is exposure that can be bought cheaply elsewhere.
 
@@ -119,7 +120,7 @@ Built and validated on **8 GB RAM, CPU only, no GPU**. The default configuration
 
 <!-- RUNTIME_BLOCK -->
 
-Measured wall clock for the run reported above (8 GB RAM, CPU only): **9.2 minutes** end to end (backtest 7s, evaluation 37s, explain 0s, volatility 32s, data 0s, features 20s, training 456s), with market data already cached.
+Measured wall clock for the run reported above (8 GB RAM, CPU only): **9.3 minutes** end to end (data 0s, features 20s, training 456s, backtest 8s, evaluation 42s, explain 0s, volatility 32s), with market data already cached.
 
 ---
 

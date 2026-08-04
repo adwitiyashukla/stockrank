@@ -55,6 +55,13 @@ def main() -> int:
         shutil.copy2(p, dst / p.name)
         copied += 1
 
+    # The serialised production model, so a clone can hit /score and /features
+    # without first running the pipeline.
+    for pattern in ("model_*.joblib", "model_*.json"):
+        for p in sorted(src.glob(pattern)):
+            shutil.copy2(p, dst / p.name)
+            copied += 1
+
     pred_p = src / "predictions.parquet"
     if pred_p.exists():
         df = pd.read_parquet(pred_p)

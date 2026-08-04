@@ -112,6 +112,16 @@ def rerun_from_predictions(cfg: Config) -> ExperimentResult:
                 res.timings[k] = previous[k]
 
     md = load_market_data(cfg)
+
+    # Refresh the data summary from the reloaded panel. Older artifacts can be
+    # missing the download and coverage block, and that block carries the
+    # survivorship-bias evidence the report depends on.
+    fresh = md.summary()
+    for k, v in fresh.items():
+        if k not in res.data_summary or k == "download" or not res.data_summary.get(k):
+            res.data_summary[k] = v
+    write_json(res.data_summary, art / "data_summary.json")
+
     _evaluate_and_persist(res, cfg, md, art)
     res.timings["total"] = sum(v for k, v in res.timings.items() if k != "total")
     write_json(res.timings, art / "timings.json")

@@ -87,14 +87,23 @@ def models() -> None:
 
 @app.command("list-runs")
 def list_runs(artifacts: str = typer.Option("artifacts", "--artifacts")) -> None:
-    """Show completed runs."""
-    root = Path(artifacts)
-    if not root.exists():
-        typer.echo("No artifacts directory yet")
-        raise typer.Exit()
-    for d in sorted(p for p in root.iterdir() if p.is_dir()):
-        marker = "ok" if (d / "model_metrics.csv").exists() else "incomplete"
-        typer.echo(f"{d.name:<28} {marker}")
+    """Show completed runs, including the demo bundle shipped with the repository."""
+    roots = [Path(artifacts), Path("demo_artifacts")]
+    found = False
+    for root in roots:
+        if not root.exists():
+            continue
+        for d in sorted(p for p in root.iterdir() if p.is_dir()):
+            complete = (d / "model_metrics.csv").exists()
+            label = f"{root.name}/{d.name}"
+            typer.echo(f"{label:<32} {'ok' if complete else 'incomplete'}")
+            found = True
+    if not found:
+        typer.echo(
+            "No runs found yet. Generate one with:\n"
+            "  python scripts/fetch_data.py --config configs/default.yaml\n"
+            "  python -m alpha_engine.cli run --config configs/default.yaml"
+        )
 
 
 def main() -> None:  # pragma: no cover
