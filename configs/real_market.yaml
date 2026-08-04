@@ -1,0 +1,146 @@
+# Wider, longer configuration. Needs ~6 GB RAM; use on a 16 GB machine.
+# Default research configuration.
+# Sized for an 8 GB RAM, CPU-only laptop: full pipeline in roughly 8 to 12 minutes.
+
+run:
+  name: full_universe
+  seed: 42
+  artifacts_dir: artifacts
+  reports_dir: reports
+
+data:
+  source: yfinance           # yfinance (real market data) | synthetic (leakage-control fixture)
+  universe: sp500_pit        # sp500_pit (point-in-time, least biased) | sp500 | file
+  universe_file: configs/universe_custom.txt
+  start: "2007-01-01"
+  end: "2026-06-30"
+  max_assets: 450            # keep the most liquid N names: memory budget and tradability
+  n_assets: 150              # synthetic simulator only
+  cache_dir: data/cache
+  min_price: 5.0             # drop sub-$5 names where spreads swamp any signal
+  min_history_days: 500
+  min_names_per_date: 30
+  benchmark: SPY
+  use_fama_french: true      # real FF5 + momentum factors from the Ken French library
+
+# Only used when data.source == synthetic. This is a control experiment, not a dataset.
+simulator:
+  n_sectors: 8
+  ann_market_vol: 0.16
+  ann_idio_vol: 0.28
+  garch_alpha: 0.08
+  garch_beta: 0.90
+  student_t_df: 5
+  momentum_strength: 0.020   # planted 12-1 momentum alpha (annualised IR contribution)
+  reversal_strength: 0.015   # planted short-horizon reversal alpha
+  lowvol_strength: 0.010     # planted low-volatility alpha
+  null_alpha: false          # set true to plant zero alpha (leakage control experiment)
+
+features:
+  return_windows: [1, 5, 10, 21, 63, 126, 252]
+  vol_windows: [10, 21, 63]
+  ma_windows: [10, 21, 50, 200]
+  volume_windows: [5, 21, 63]
+  winsorize_q: 0.01
+  cross_sectional_rank: true
+  standardise: zscore        # zscore | rank | none
+
+label:
+  # Target = cross-sectionally demeaned forward return. A dollar-neutral book earns
+  # the spread between names, not the market, so the mean must come out.
+  #
+  # Two alternatives were tested and rejected on the real data (see docs/METHODOLOGY.md):
+  #   * beta-adjusted residual return: rolling beta is estimated with error, and that
+  #     error induces a spurious negative correlation between estimated beta and the
+  #     residual target. A model exploits it and earns nothing, because the book is
+  #     beta-neutralised anyway.
+  #   * volatility-scaled return: dividing by trailing volatility mechanically
+  #     anti-correlates the target with every volatility feature, inflating the
+  #     measured information coefficient without adding tradable information.
+  type: forward_excess_return   # forward_excess_return | forward_return | triple_barrier
+  horizon: 21                   # 21d chosen empirically: mean |IC| rises from 0.005 (1d)
+  neutralise_market: false      # to 0.012 (21d); see reports/factor_diagnostics.csv
+  scale_by_volatility: false
+  triple_barrier:
+    upper_sigma: 2.0
+    lower_sigma: 2.0
+    max_holding_days: 10
+
+validation:
+  scheme: purged_walk_forward
+  n_splits: 6
+  embargo_days: 21              # at least one label horizon of buffer
+  train_window_days: 1260     # ~5 years
+  test_window_days: 252       # ~1 year
+  expanding: false
+
+models:
+  # factor_composite is the zero-parameter benchmark every learned model must beat
+  enabled: [factor_composite, ridge, elasticnet, lightgbm, gru, ensemble]
+  ridge:
+    alpha: 10.0
+  elasticnet:
+    alpha: 0.001
+    l1_ratio: 0.5
+  lightgbm:
+    n_estimators: 400
+    learning_rate: 0.03
+    num_leaves: 31
+    max_depth: 6
+    min_child_samples: 200
+    subsample: 0.8
+    subsample_freq: 1
+    colsample_bytree: 0.7
+    reg_lambda: 5.0
+    n_jobs: 4
+  gru:
+    sequence_length: 40          # 2 months of history per sample
+    hidden_size: 64
+    num_layers: 1
+    dropout: 0.2
+    batch_size: 1024
+    epochs: 6
+    lr: 0.001
+    weight_decay: 0.00001
+    max_train_sequences: 80000   # RAM and runtime guard for 8 GB CPU-only machines
+    patience: 2
+  ensemble:
+    method: rank_average          # rank_average | ridge_stack
+    members: [lightgbm, gru, elasticnet, factor_composite]
+
+volatility:
+  model: garch                    # garch | har | ewma
+  garch_p: 1
+  garch_q: 1
+  refit_every_days: 126
+  max_assets_fitted: 30           # GARCH is the slow part; cap it for laptop runs
+
+portfolio:
+  method: rank_long_short         # rank_long_short | mean_variance | risk_parity
+  n_long: 25
+  n_short: 25
+  gross_leverage: 1.0          # baseline; volatility targeting scales this
+  max_weight: 0.06             # no single name above 6% of gross
+  dollar_neutral: true
+  beta_neutral: true        # project out market beta: dollar neutral is not market neutral
+  sector_neutral: false
+  vol_target_annual: 0.10
+  vol_lookback_days: 63
+  max_vol_scalar: 3.0          # must be wide enough that the vol target is not clipped
+  rebalance_days: 21            # must equal label.horizon: non-overlapping tranches
+  mean_variance:
+    risk_aversion: 5.0
+    shrinkage: ledoit_wolf
+    cov_lookback_days: 252
+
+backtest:
+  initial_capital: 1000000
+  cost_bps: 5.0                   # one-way commission plus spread
+  slippage_bps: 2.0
+  borrow_bps_annual: 50.0         # short financing
+  turnover_cap_daily: 0.25
+
+evaluation:
+  n_trials_for_deflated_sharpe: 60   # models x horizons x targets actually tried
+  bootstrap_samples: 1000
+  pbo_splits: 8
