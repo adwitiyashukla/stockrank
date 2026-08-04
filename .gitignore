@@ -34,3 +34,6 @@ run_*.log
 run_*.err
 data_fetch*.log
 diagnostics.log
+streamlit.log
+streamlit.err
+.writetest
