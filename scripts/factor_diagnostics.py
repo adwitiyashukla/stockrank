@@ -19,17 +19,17 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from alpha_engine.config import load_config  # noqa: E402
-from alpha_engine.data.loader import load_market_data  # noqa: E402
-from alpha_engine.evaluation.metrics import ic_summary, matrix_ic  # noqa: E402
-from alpha_engine.features.cross_section import normalise  # noqa: E402
-from alpha_engine.features.labels import (  # noqa: E402
+from stockrank.config import load_config  # noqa: E402
+from stockrank.data.loader import load_market_data  # noqa: E402
+from stockrank.evaluation.metrics import ic_summary, matrix_ic  # noqa: E402
+from stockrank.features.cross_section import normalise  # noqa: E402
+from stockrank.features.labels import (  # noqa: E402
     beta_adjusted_forward_return,
     cross_sectional_demean,
     forward_return,
 )
-from alpha_engine.features.technical import build_feature_matrices  # noqa: E402
-from alpha_engine.utils.logging import get_logger, setup_logging  # noqa: E402
+from stockrank.features.technical import build_feature_matrices  # noqa: E402
+from stockrank.utils.logging import get_logger, setup_logging  # noqa: E402
 
 logger = get_logger("diagnostics")
 

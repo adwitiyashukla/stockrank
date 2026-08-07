@@ -39,5 +39,5 @@ def test_dashboard_renders_without_exceptions():
     assert at.dataframe, "expected at least one results table"
 
     text = " ".join(m.value for m in at.markdown if isinstance(m.value, str))
-    assert "Equity Alpha Engine" in text
+    assert "StockRank" in text
     assert "Verdict" in text

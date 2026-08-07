@@ -57,7 +57,7 @@ def main() -> int:
 
     # The serialised production model, so a clone can hit /score and /features
     # without first running the pipeline.
-    for pattern in ("model_*.joblib", "model_*.json"):
+    for pattern in ("model_*.txt", "model_*.json", "model_*.joblib"):
         for p in sorted(src.glob(pattern)):
             shutil.copy2(p, dst / p.name)
             copied += 1

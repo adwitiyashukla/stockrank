@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from alpha_engine.config import PortfolioConfig
-from alpha_engine.portfolio.construction import (
+from stockrank.config import PortfolioConfig
+from stockrank.portfolio.construction import (
     apply_beta_neutrality,
     build_weights_for_date,
     ledoit_wolf_cov,

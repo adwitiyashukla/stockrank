@@ -33,15 +33,15 @@ jobs:
         run: ruff check src tests dashboard scripts
 
       - name: Test (fast)
-        run: pytest -q -m "not slow" --cov=alpha_engine --cov-report=term-missing
+        run: pytest -q -m "not slow" --cov=stockrank --cov-report=term-missing
 
       - name: Leakage control experiments
         run: pytest -q -m slow
 
       - name: Smoke test the pipeline end to end
-        run: python -m alpha_engine.cli run --config configs/signal_recovery.yaml --smoke
+        run: python -m stockrank.cli run --config configs/signal_recovery.yaml --smoke
 
       - name: Check the CLI entrypoints
         run: |
-          python -m alpha_engine.cli models
-          python -m alpha_engine.cli list-runs
+          python -m stockrank.cli models
+          python -m stockrank.cli list-runs

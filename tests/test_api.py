@@ -16,7 +16,7 @@ def client():
     starlette_testclient = pytest.importorskip(
         "starlette.testclient", reason="TestClient needs an http client backend"
     )
-    from alpha_engine.api.main import app
+    from stockrank.api.main import app
 
     return starlette_testclient.TestClient(app)
 
@@ -24,7 +24,7 @@ def client():
 def test_root_lists_the_service(client):
     r = client.get("/")
     assert r.status_code == 200
-    assert r.json()["service"] == "Equity Alpha Engine"
+    assert r.json()["service"] == "StockRank"
 
 
 def test_health_reports_status(client):

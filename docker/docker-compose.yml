@@ -3,8 +3,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: equity-alpha-engine:latest
-    container_name: alpha-api
+    image: stockrank:latest
+    container_name: stockrank-api
     ports: ["8000:8000"]
     volumes:
       - ../artifacts:/app/artifacts
@@ -12,8 +12,8 @@ services:
     restart: unless-stopped
 
   dashboard:
-    image: equity-alpha-engine:latest
-    container_name: alpha-dashboard
+    image: stockrank:latest
+    container_name: stockrank-dashboard
     depends_on: [api]
     ports: ["8501:8501"]
     volumes:
@@ -25,11 +25,11 @@ services:
     restart: unless-stopped
 
   research:
-    image: equity-alpha-engine:latest
-    container_name: alpha-research
+    image: stockrank:latest
+    container_name: stockrank-research
     profiles: ["research"]
     volumes:
       - ../artifacts:/app/artifacts
       - ../data:/app/data
       - ../reports:/app/reports
-    command: ["python", "-m", "alpha_engine.cli", "run", "--config", "configs/default.yaml"]
+    command: ["python", "-m", "stockrank.cli", "run", "--config", "configs/default.yaml"]

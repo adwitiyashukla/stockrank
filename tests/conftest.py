@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from alpha_engine.config import Config
-from alpha_engine.data.loader import load_market_data
-from alpha_engine.features.pipeline import build_feature_set
+from stockrank.config import Config
+from stockrank.data.loader import load_market_data
+from stockrank.features.pipeline import build_feature_set
 
 
 @pytest.fixture(scope="session")
@@ -24,7 +24,7 @@ def small_config() -> Config:
     cfg.data.max_assets = 40
     cfg.data.benchmark = "MKT"
     cfg.data.use_fama_french = False
-    cfg.data.cache_dir = ".pytest_cache/alpha_data"
+    cfg.data.cache_dir = ".pytest_cache/stockrank_data_data"
     cfg.data.min_history_days = 200
     cfg.data.min_names_per_date = 10
     cfg.label.horizon = 5

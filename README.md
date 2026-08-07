@@ -1,14 +1,14 @@
-# Equity Alpha Engine
+# StockRank
 
 **Cross-sectional equity return forecasting, leakage-safe validation, and constrained portfolio construction on 16 years of real US market data.**
 
-[![CI](https://github.com/adwitiyashukla/equity-alpha-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/adwitiyashukla/equity-alpha-engine/actions/workflows/ci.yml)
+[![CI](https://github.com/adwitiyashukla/stockrank/actions/workflows/ci.yml/badge.svg)](https://github.com/adwitiyashukla/stockrank/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230.svg)](https://github.com/astral-sh/ruff)
-[![Live demo](https://img.shields.io/badge/live%20demo-research%20console-4C8DFF.svg)](https://equity-alpha-engine.streamlit.app)
+[![Live demo](https://img.shields.io/badge/live%20demo-research%20console-4C8DFF.svg)](https://stockrank.streamlit.app)
 
-### [Open the live research console](https://equity-alpha-engine.streamlit.app)
+### [Open the live research console](https://stockrank.streamlit.app)
 
 No install required. Signal quality, strategy performance, the significance tests and the latest ranked long/short screen, all rendered from the artifacts this repository produces.
 
@@ -84,15 +84,15 @@ That conclusion is the deliverable. Price and volume features alone carry very l
 ![Information coefficient by fold](reports/figures/baseline/ic_by_fold.png)
 
 Full write-up with every figure: **[reports/RESULTS_baseline.md](reports/RESULTS_baseline.md)**.
-Click through it interactively: **[equity-alpha-engine.streamlit.app](https://equity-alpha-engine.streamlit.app)**.
+Click through it interactively: **[stockrank.streamlit.app](https://stockrank.streamlit.app)**.
 
 ---
 
 ## Quickstart
 
 ```bash
-git clone https://github.com/adwitiyashukla/equity-alpha-engine.git
-cd equity-alpha-engine
+git clone https://github.com/adwitiyashukla/stockrank.git
+cd stockrank
 
 python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -e ".[all]"
@@ -101,11 +101,11 @@ pip install -e ".[all]"
 python scripts/fetch_data.py --config configs/default.yaml
 
 # 2. Run the full research pipeline (about 15 minutes on a CPU-only laptop)
-python -m alpha_engine.cli run --config configs/default.yaml
+python -m stockrank.cli run --config configs/default.yaml
 
 # 3. Explore
 streamlit run dashboard/app.py                        # research console
-uvicorn alpha_engine.api.main:app --port 8000         # API, docs at /docs
+uvicorn stockrank.api.main:app --port 8000         # API, docs at /docs
 ```
 
 No API keys are required. Everything comes from public sources.
@@ -120,7 +120,7 @@ Built and validated on **8 GB RAM, CPU only, no GPU**. The default configuration
 
 <!-- RUNTIME_BLOCK -->
 
-Measured wall clock for the run reported above (8 GB RAM, CPU only): **9.3 minutes** end to end (data 0s, features 20s, training 456s, backtest 8s, evaluation 42s, explain 0s, volatility 32s), with market data already cached.
+Measured wall clock for the run reported above (8 GB RAM, CPU only): **9.5 minutes** end to end (data 0s, features 20s, training 456s, backtest 8s, evaluation 46s, explain 12s, volatility 30s), with market data already cached.
 
 ---
 
@@ -184,7 +184,7 @@ Measured wall clock for the run reported above (8 GB RAM, CPU only): **9.3 minut
 ## Repository layout
 
 ```
-src/alpha_engine/
+src/stockrank/
   config.py              typed config; an experiment is one YAML file plus a seed
   experiment.py          end-to-end orchestration
   cli.py                 typer CLI: run, fetch, report, models, list-runs
@@ -253,7 +253,7 @@ The suite runs entirely on the synthetic simulator, so it needs no network and p
 
 ## Deploy
 
-The research console is deployed at **[equity-alpha-engine.streamlit.app](https://equity-alpha-engine.streamlit.app)**, served straight from this repository's `demo_artifacts/`.
+The research console is deployed at **[stockrank.streamlit.app](https://stockrank.streamlit.app)**, served straight from this repository's `demo_artifacts/`.
 
 To run the whole stack locally:
 

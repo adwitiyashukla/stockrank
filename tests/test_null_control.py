@@ -12,10 +12,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from alpha_engine.data.loader import load_market_data
-from alpha_engine.evaluation.metrics import daily_ic, ic_summary
-from alpha_engine.features.pipeline import build_feature_set
-from alpha_engine.models.trainer import walk_forward_train
+from stockrank.data.loader import load_market_data
+from stockrank.evaluation.metrics import daily_ic, ic_summary
+from stockrank.features.pipeline import build_feature_set
+from stockrank.models.trainer import walk_forward_train
 
 
 @pytest.mark.slow

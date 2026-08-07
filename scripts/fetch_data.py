@@ -20,9 +20,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from alpha_engine.config import load_config  # noqa: E402
-from alpha_engine.data.loader import load_market_data  # noqa: E402
-from alpha_engine.utils.logging import get_logger, setup_logging  # noqa: E402
+from stockrank.config import load_config  # noqa: E402
+from stockrank.data.loader import load_market_data  # noqa: E402
+from stockrank.utils.logging import get_logger, setup_logging  # noqa: E402
 
 logger = get_logger("fetch_data")
 

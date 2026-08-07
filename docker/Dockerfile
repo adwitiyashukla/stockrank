@@ -21,13 +21,13 @@ RUN pip install --upgrade pip setuptools wheel \
 
 FROM python:3.11-slim AS runtime
 
-LABEL org.opencontainers.image.title="equity-alpha-engine" \
+LABEL org.opencontainers.image.title="stockrank" \
       org.opencontainers.image.description="Cross-sectional equity return forecasting and portfolio construction" \
       org.opencontainers.image.licenses="MIT"
 
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 curl \
     && rm -rf /var/lib/apt/lists/* \
-    && useradd --create-home --uid 1000 alpha
+    && useradd --create-home --uid 1000 stockrank
 
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH" \
@@ -35,15 +35,15 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app
-COPY --chown=alpha:alpha src ./src
-COPY --chown=alpha:alpha configs ./configs
-COPY --chown=alpha:alpha dashboard ./dashboard
-COPY --chown=alpha:alpha scripts ./scripts
-COPY --chown=alpha:alpha .streamlit ./.streamlit
-COPY --chown=alpha:alpha pyproject.toml README.md ./
+COPY --chown=stockrank:stockrank src ./src
+COPY --chown=stockrank:stockrank configs ./configs
+COPY --chown=stockrank:stockrank dashboard ./dashboard
+COPY --chown=stockrank:stockrank scripts ./scripts
+COPY --chown=stockrank:stockrank .streamlit ./.streamlit
+COPY --chown=stockrank:stockrank pyproject.toml README.md ./
 
-RUN mkdir -p artifacts data/cache reports && chown -R alpha:alpha /app
-USER alpha
+RUN mkdir -p artifacts data/cache reports && chown -R stockrank:stockrank /app
+USER stockrank
 ENV PYTHONPATH=/app/src
 
 EXPOSE 8000 8501
@@ -51,4 +51,4 @@ EXPOSE 8000 8501
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -fsS http://localhost:8000/health || exit 1
 
-CMD ["uvicorn", "alpha_engine.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "stockrank.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

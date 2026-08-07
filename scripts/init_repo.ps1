@@ -18,40 +18,40 @@ function Commit($message, [string[]]$paths) {
 Commit "chore: project scaffolding, packaging, linting and CI" `
     @(".gitignore", ".gitattributes", ".dockerignore", "LICENSE", "pyproject.toml",
       "requirements.txt", "Makefile", ".github/workflows/ci.yml",
-      "src/alpha_engine/__init__.py", "src/alpha_engine/config.py", "src/alpha_engine/utils")
+      "src/stockrank/__init__.py", "src/stockrank/config.py", "src/stockrank/utils")
 
 Commit "feat(data): point-in-time S&P 500 universe and resumable market data ingestion" `
-    @("src/alpha_engine/data/__init__.py", "src/alpha_engine/data/universe.py",
-      "src/alpha_engine/data/providers.py", "src/alpha_engine/data/factors.py",
-      "src/alpha_engine/data/loader.py", "scripts/fetch_data.py")
+    @("src/stockrank/data/__init__.py", "src/stockrank/data/universe.py",
+      "src/stockrank/data/providers.py", "src/stockrank/data/factors.py",
+      "src/stockrank/data/loader.py", "scripts/fetch_data.py")
 
 Commit "feat(data): synthetic market simulator with plantable alpha for leakage control" `
-    @("src/alpha_engine/data/simulator.py")
+    @("src/stockrank/data/simulator.py")
 
 Commit "feat(features): 36-factor library, cross-sectional normalisation and labelling" `
-    @("src/alpha_engine/features")
+    @("src/stockrank/features")
 
 Commit "feat(validation): purged walk-forward and purged k-fold splitters with embargo" `
-    @("src/alpha_engine/validation")
+    @("src/stockrank/validation")
 
 Commit "feat(models): linear, gradient boosting, sequence models and a zero-parameter factor benchmark" `
-    @("src/alpha_engine/models")
+    @("src/stockrank/models")
 
 Commit "feat(portfolio): construction with simultaneous dollar, beta and sector neutrality" `
-    @("src/alpha_engine/portfolio")
+    @("src/stockrank/portfolio")
 
 Commit "feat(backtest): daily engine with commission, slippage, borrow costs and a turnover cap" `
-    @("src/alpha_engine/backtest")
+    @("src/stockrank/backtest")
 
 Commit "feat(evaluation): IC, deflated Sharpe, PBO, bootstrap and Fama-French attribution" `
-    @("src/alpha_engine/evaluation", "src/alpha_engine/explain")
+    @("src/stockrank/evaluation", "src/stockrank/explain")
 
 Commit "feat: end-to-end experiment orchestration, CLI and report generation" `
-    @("src/alpha_engine/experiment.py", "src/alpha_engine/cli.py",
-      "src/alpha_engine/reporting", "configs", "scripts/factor_diagnostics.py")
+    @("src/stockrank/experiment.py", "src/stockrank/cli.py",
+      "src/stockrank/reporting", "configs", "scripts/factor_diagnostics.py")
 
 Commit "feat(api): FastAPI scoring and screening service" `
-    @("src/alpha_engine/api")
+    @("src/stockrank/api")
 
 Commit "feat(dashboard): Streamlit research console" `
     @("dashboard", ".streamlit")

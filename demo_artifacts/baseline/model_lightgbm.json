@@ -44,5 +44,19 @@
   "n_train_rows": 309025,
   "label_horizon": 21,
   "normalisation": "zscore",
-  "run": "baseline"
+  "run": "baseline",
+  "format": "lightgbm_text_v1",
+  "artifact": "model_lightgbm.txt",
+  "params": {
+    "n_estimators": 400,
+    "learning_rate": 0.03,
+    "num_leaves": 31,
+    "max_depth": 6,
+    "min_child_samples": 200,
+    "subsample": 0.8,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.7,
+    "reg_lambda": 5.0,
+    "n_jobs": 4
+  }
 }

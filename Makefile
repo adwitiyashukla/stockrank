@@ -30,26 +30,26 @@ fmt:
 	$(PY) -m ruff format src tests
 
 run:
-	$(PY) -m alpha_engine.cli run --config $(CONFIG)
+	$(PY) -m stockrank.cli run --config $(CONFIG)
 
 run-fast:
-	$(PY) -m alpha_engine.cli run --config configs/fast.yaml
+	$(PY) -m stockrank.cli run --config configs/fast.yaml
 
 control:
-	$(PY) -m alpha_engine.cli run --config configs/leakage_control.yaml
-	$(PY) -m alpha_engine.cli run --config configs/signal_recovery.yaml
+	$(PY) -m stockrank.cli run --config configs/leakage_control.yaml
+	$(PY) -m stockrank.cli run --config configs/signal_recovery.yaml
 
 report:
-	$(PY) -m alpha_engine.cli report --config $(CONFIG)
+	$(PY) -m stockrank.cli report --config $(CONFIG)
 
 api:
-	$(PY) -m uvicorn alpha_engine.api.main:app --reload --port 8000
+	$(PY) -m uvicorn stockrank.api.main:app --reload --port 8000
 
 app:
 	$(PY) -m streamlit run dashboard/app.py
 
 docker:
-	docker build -f docker/Dockerfile -t alpha-engine:latest .
+	docker build -f docker/Dockerfile -t stockrank:latest .
 
 clean:
 	rm -rf artifacts reports/figures/*.png .pytest_cache .ruff_cache

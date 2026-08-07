@@ -5,9 +5,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from alpha_engine.config import Config, SimulatorConfig, load_config
-from alpha_engine.data.loader import load_market_data
-from alpha_engine.data.simulator import simulate_market
+from stockrank.config import Config, SimulatorConfig, load_config
+from stockrank.data.loader import load_market_data
+from stockrank.data.simulator import simulate_market
 
 
 def test_every_shipped_config_parses():

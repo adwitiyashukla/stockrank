@@ -13,7 +13,7 @@ Typical order:
 ```bash
 python scripts/fetch_data.py --config configs/default.yaml
 python scripts/factor_diagnostics.py --config configs/default.yaml
-python -m alpha_engine.cli run --config configs/default.yaml
+python -m stockrank.cli run --config configs/default.yaml
 python scripts/prepare_demo.py --run baseline
 python scripts/update_readme_results.py --run baseline
 ```
@@ -21,5 +21,5 @@ python scripts/update_readme_results.py --run baseline
 Changing a portfolio or cost assumption does not require refitting anything:
 
 ```bash
-python -m alpha_engine.cli rebacktest --config configs/default.yaml
+python -m stockrank.cli rebacktest --config configs/default.yaml
 ```

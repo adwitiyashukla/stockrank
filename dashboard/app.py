@@ -1,6 +1,6 @@
-"""Equity Alpha Engine: interactive research console.
+"""StockRank: interactive research console.
 
-Reads artifacts produced by ``python -m alpha_engine.cli run`` and presents them
+Reads artifacts produced by ``python -m stockrank.cli run`` and presents them
 the way a research desk would review a signal: forecast quality first, strategy
 performance second, and the statistical case for believing any of it third.
 
@@ -24,7 +24,7 @@ from data_access import find_runs, load_all_predictions, load_run  # noqa: E402
 from theme import CSS, kpi_card  # noqa: E402
 
 st.set_page_config(
-    page_title="Equity Alpha Engine",
+    page_title="StockRank",
     page_icon="chart_with_upwards_trend",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -47,20 +47,20 @@ def tone(v: float, good_high: bool = True) -> str:
 runs = find_runs()
 if not runs:
     st.markdown(
-        '<div class="hero"><h1>Equity Alpha Engine</h1>'
+        '<div class="hero"><h1>StockRank</h1>'
         "<p>No completed runs found. Generate one first:</p></div>",
         unsafe_allow_html=True,
     )
     st.code(
         "pip install -e \".[all]\"\n"
         "python scripts/fetch_data.py --config configs/default.yaml\n"
-        "python -m alpha_engine.cli run --config configs/default.yaml",
+        "python -m stockrank.cli run --config configs/default.yaml",
         language="bash",
     )
     st.stop()
 
 with st.sidebar:
-    st.markdown("### Equity Alpha Engine")
+    st.markdown("### StockRank")
     st.caption("Cross-sectional forecasting and portfolio construction")
     st.divider()
 
@@ -107,7 +107,7 @@ src = cfg.get("data", {}).get("source", "?")
 st.markdown(
     f"""
 <div class="hero">
-  <h1>Equity Alpha Engine</h1>
+  <h1>StockRank</h1>
   <p>Cross-sectional return forecasting on {n_names} US large-cap equities, {period}.
   {n_feats} price and volume factors, leakage-safe walk-forward validation, and a
   dollar- and beta-neutral long/short book with explicit trading costs.</p>
@@ -492,6 +492,6 @@ with tabs[5]:
 
 st.divider()
 st.caption(
-    "Equity Alpha Engine  |  research code, not investment advice  |  "
+    "StockRank  |  research code, not investment advice  |  "
     "every figure is out of sample and net of modelled trading costs"
 )

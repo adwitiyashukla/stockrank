@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "alpha-engine"
+name = "stockrank"
 version = "0.1.0"
 description = "Cross-sectional equity return forecasting and portfolio construction with leakage-safe validation"
 readme = "README.md"
@@ -43,7 +43,7 @@ all = [
 ]
 
 [project.scripts]
-alpha = "alpha_engine.cli:app"
+stockrank = "stockrank.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]

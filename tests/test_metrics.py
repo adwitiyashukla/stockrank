@@ -5,15 +5,15 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from alpha_engine.evaluation.metrics import daily_ic, ic_summary, matrix_ic, quantile_spread
-from alpha_engine.evaluation.performance import performance_stats
-from alpha_engine.evaluation.significance import (
+from stockrank.evaluation.metrics import daily_ic, ic_summary, matrix_ic, quantile_spread
+from stockrank.evaluation.performance import performance_stats
+from stockrank.evaluation.significance import (
     deflated_sharpe_ratio,
     expected_max_sharpe,
     probability_of_backtest_overfitting,
     stationary_bootstrap_sharpe,
 )
-from alpha_engine.utils.stats import max_drawdown, newey_west_tstat, sharpe_ratio
+from stockrank.utils.stats import max_drawdown, newey_west_tstat, sharpe_ratio
 
 
 def test_perfect_forecast_has_ic_of_one():
@@ -113,8 +113,8 @@ def test_ic_summary_handles_empty_input():
 
 def test_factor_composite_needs_no_training_data():
     """The benchmark must be identical whether it 'sees' 10 rows or 100000."""
-    from alpha_engine.config import Config
-    from alpha_engine.models.registry import build_model
+    from stockrank.config import Config
+    from stockrank.models.registry import build_model
 
     rng = np.random.default_rng(9)
     feats = ["mom_12_1", "ret_21", "vol_63", "beta_63", "amihud_illiq"]
@@ -128,8 +128,8 @@ def test_factor_composite_needs_no_training_data():
 
 
 def test_factor_composite_signs_follow_the_literature():
-    from alpha_engine.config import Config
-    from alpha_engine.models.registry import build_model
+    from stockrank.config import Config
+    from stockrank.models.registry import build_model
 
     feats = ["mom_12_1", "ret_21", "vol_63", "beta_63", "amihud_illiq"]
     m = build_model("factor_composite", feats, Config())

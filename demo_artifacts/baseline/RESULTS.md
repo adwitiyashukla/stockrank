@@ -129,7 +129,7 @@ Stated plainly, because a results document that lists none is not credible.
 ```bash
 pip install -e ".[all]"
 python scripts/fetch_data.py --config configs/baseline.yaml   # or your config
-python -m alpha_engine.cli run --config configs/baseline.yaml
+python -m stockrank.cli run --config configs/baseline.yaml
 ```
 
-Wall clock on the reference machine (8 GB RAM, CPU only): data 0s, features 20s, training 456s, backtest 8s, total 558s. Seed `42`.
+Wall clock on the reference machine (8 GB RAM, CPU only): data 0s, features 20s, training 456s, backtest 8s, total 572s. Seed `42`.

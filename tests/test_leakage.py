@@ -10,10 +10,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from alpha_engine.config import FeatureConfig, LabelConfig
-from alpha_engine.features.labels import build_labels, forward_return
-from alpha_engine.features.technical import build_feature_matrices
-from alpha_engine.validation.splitters import PurgedWalkForward
+from stockrank.config import FeatureConfig, LabelConfig
+from stockrank.features.labels import build_labels, forward_return
+from stockrank.features.technical import build_feature_matrices
+from stockrank.validation.splitters import PurgedWalkForward
 
 
 def test_features_are_causal(market_data, small_config):

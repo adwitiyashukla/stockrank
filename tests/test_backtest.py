@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from alpha_engine.backtest.engine import run_backtest
-from alpha_engine.config import BacktestConfig, PortfolioConfig
+from stockrank.backtest.engine import run_backtest
+from stockrank.config import BacktestConfig, PortfolioConfig
 
 HORIZON = 5
 N_TICKERS = 40

@@ -2,7 +2,7 @@
 
 ## Streamlit Community Cloud (free, gives a public URL)
 
-**Deployed at <https://equity-alpha-engine.streamlit.app>.**
+**Deployed at <https://stockrank.streamlit.app>.**
 
 The research console renders artifacts from disk, so the repository ships a small
 `demo_artifacts/` bundle that the hosted app reads.
@@ -10,12 +10,12 @@ The research console renders artifacts from disk, so the repository ships a smal
 1. Push this repository to GitHub.
 2. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
 3. **Create app**, then **Deploy a public app from GitHub**, and set:
-   - Repository: `adwitiyashukla/equity-alpha-engine`
+   - Repository: `adwitiyashukla/stockrank`
    - Branch: `main`
    - Main file path: `dashboard/app.py`
 4. Deploy. The first build takes three to five minutes while dependencies install.
 
-The app lands at roughly `https://equity-alpha-engine.streamlit.app`. Put that
+The app lands at roughly `https://stockrank.streamlit.app`. Put that
 link at the top of the README so a reviewer can see the work without cloning
 anything.
 
@@ -54,7 +54,7 @@ it near 1 GB rather than 6 GB.
 
 ```bash
 pip install -e ".[api]"
-uvicorn alpha_engine.api.main:app --host 0.0.0.0 --port 8000
+uvicorn stockrank.api.main:app --host 0.0.0.0 --port 8000
 ```
 
 | Endpoint | Purpose |
@@ -83,9 +83,9 @@ carries very little meaning.
 The pipeline is a single command, so a nightly refresh is a one-line cron entry:
 
 ```cron
-0 2 * * 1-5  cd /opt/equity-alpha-engine && \
+0 2 * * 1-5  cd /opt/stockrank && \
   .venv/bin/python scripts/fetch_data.py --config configs/default.yaml && \
-  .venv/bin/python -m alpha_engine.cli run --config configs/default.yaml
+  .venv/bin/python -m stockrank.cli run --config configs/default.yaml
 ```
 
 Ingestion is incremental and resumable, so a failed night costs one retry rather
