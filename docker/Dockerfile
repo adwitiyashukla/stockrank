@@ -1,4 +1,3 @@
-# Multi-stage build. The runtime image carries no compilers and no build cache.
 FROM python:3.11-slim AS builder
 
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -13,11 +12,9 @@ COPY src ./src
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-# CPU-only torch keeps the image around 1 GB instead of 6 GB.
 RUN pip install --upgrade pip setuptools wheel \
     && pip install torch --index-url https://download.pytorch.org/whl/cpu \
     && pip install ".[explain,market,api,app]"
-
 
 FROM python:3.11-slim AS runtime
 

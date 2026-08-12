@@ -1,13 +1,3 @@
-"""FastAPI scoring service.
-
-Exposes the trained forecaster and the latest cross-sectional screen. Kept
-deliberately thin: it loads artifacts produced by the research pipeline and does
-no modelling of its own, so what is served is exactly what was evaluated.
-
-    uvicorn stockrank.api.main:app --reload --port 8000
-    open http://localhost:8000/docs
-"""
-
 from __future__ import annotations
 
 import json
@@ -87,7 +77,7 @@ def _load_model(run: str) -> tuple[Any, list[str], str]:
         )
     try:
         model, feats = load_model(candidates[0])
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(503, f"Model artifact unusable: {exc}") from exc
     return model, feats, candidates[0].stem.replace("model_", "")
 
@@ -123,7 +113,7 @@ def health() -> HealthResponse:
     for r in runs:
         try:
             loaded.append(f"{r}:{_load_model(r)[2]}")
-        except Exception:  # noqa: BLE001 - health must report, never crash
+        except Exception:
             continue
     return HealthResponse(version=__version__, models_loaded=loaded, runs_available=runs)
 
@@ -143,19 +133,12 @@ def metrics(run: str) -> MetricsResponse:
 
 @app.get("/runs/{run}/features", tags=["research"])
 def features(run: str) -> dict:
-    """Feature contract the model expects, in order."""
     _, feats, name = _load_model(run)
     return {"run": run, "model": name, "n_features": len(feats), "feature_names": feats}
 
 
 @app.post("/score", response_model=ScoreResponse, tags=["inference"])
 def score(req: ScoreRequest) -> ScoreResponse:
-    """Score a batch of feature vectors.
-
-    Features must already be cross-sectionally normalised the same way the training
-    pipeline normalises them. Missing features are filled with zero, which for a
-    z-scored input means "at the cross-sectional average", i.e. no view.
-    """
     model, feats, name = _load_model(req.run)
     if not req.observations:
         raise HTTPException(400, "No observations supplied")
@@ -195,7 +178,6 @@ def screen(
     model: str = Query("ensemble", description="Which prediction column to rank on"),
     n: int = Query(20, ge=1, le=100),
 ) -> ScreenResponse:
-    """Top longs and shorts on the most recent date in the run's sample."""
     df = _load_predictions(run)
     col = f"pred_{model}"
     if col not in df.columns:

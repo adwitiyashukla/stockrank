@@ -1,26 +1,3 @@
-"""Saving and loading a production forecaster.
-
-The walk-forward loop fits one model per fold, which is right for evaluation and
-useless for deployment. For serving, a single model is refitted on the most
-recent training window and persisted alongside the exact feature list it expects,
-so the API cannot silently score a differently ordered matrix.
-
-Why this does not simply pickle the wrapper
--------------------------------------------
-It used to. Pickling a custom class stores the fully qualified module path, so
-the artifact silently breaks the moment the package is renamed, a module is
-moved, or the library version shifts. That is a real failure mode: renaming this
-package from ``alpha_engine`` to ``stockrank`` invalidated every previously saved
-model, and the only symptom was a 500 from the scoring endpoint.
-
-Gradient boosted models are therefore stored in **LightGBM's own text format**,
-which is a stable, self-describing, human-readable serialisation with no
-dependency on this codebase at all. The wrapper is reconstructed at load time
-from the feature list and parameters recorded in the sidecar JSON. Other model
-types still fall back to joblib, and the loader tells you plainly when an
-artifact was written by an incompatible layout instead of raising a pickle error.
-"""
-
 from __future__ import annotations
 
 import json
@@ -41,7 +18,6 @@ FORMAT_JOBLIB = "joblib_v1"
 def save_model(
     model, feature_names: list[str], path: str | Path, metadata: dict[str, Any] | None = None
 ) -> Path:
-    """Persist ``model`` plus its feature contract. Returns the artifact path."""
     p = Path(path)
     ensure_dir(p.parent)
     meta: dict[str, Any] = {
@@ -53,7 +29,6 @@ def save_model(
 
     booster = getattr(getattr(model, "model_", None), "booster_", None)
     if booster is not None:
-        # Native text format: portable across package renames and library versions.
         txt = p.with_suffix(".txt")
         booster.save_model(str(txt))
         meta["format"] = FORMAT_LIGHTGBM_TEXT
@@ -63,7 +38,7 @@ def save_model(
             if isinstance(v, (int, float, str, bool))
         }
         if p.exists():
-            p.unlink()  # remove any stale pickle from an earlier layout
+            p.unlink()
     else:
         import joblib
 
@@ -77,7 +52,6 @@ def save_model(
 
 
 class _BoosterForecaster:
-    """Minimal scorer wrapping a raw LightGBM booster loaded from text."""
 
     name = "lightgbm"
 
@@ -98,7 +72,6 @@ class _BoosterForecaster:
 
 
 def load_model(path: str | Path) -> tuple[Any, list[str]]:
-    """Load a persisted model. Accepts both the text and the legacy joblib layout."""
     p = Path(path)
     meta_path = p.with_suffix(".json")
     meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
@@ -127,7 +100,6 @@ def load_model(path: str | Path) -> tuple[Any, list[str]]:
 
 
 def fit_production_model(fs, cfg, model_name: str = "lightgbm", train_days: int | None = None):
-    """Refit a single model on the most recent window for serving."""
     from stockrank.models.registry import build_model
 
     frame = fs.frame

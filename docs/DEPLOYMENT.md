@@ -1,34 +1,18 @@
 # Deployment
 
-## Streamlit Community Cloud (free, gives a public URL)
+## Streamlit Community Cloud
 
-**Deployed at <https://stockrank.streamlit.app>.**
+Deployed at <https://stockrank.streamlit.app>.
 
-The research console renders artifacts from disk, so the repository ships a small
-`demo_artifacts/` bundle that the hosted app reads.
+The dashboard renders artifacts from disk, so `demo_artifacts/` is committed for the hosted app to read.
 
-1. Push this repository to GitHub.
-2. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
-3. **Create app**, then **Deploy a public app from GitHub**, and set:
-   - Repository: `adwitiyashukla/stockrank`
-   - Branch: `main`
-   - Main file path: `dashboard/app.py`
-4. Deploy. The first build takes three to five minutes while dependencies install.
+1. Push the repo to GitHub.
+2. Sign in at [share.streamlit.io](https://share.streamlit.io) with GitHub.
+3. Create app, deploy from GitHub, repository `adwitiyashukla/stockrank`, branch `main`, main file `dashboard/app.py`.
 
-The app lands at roughly `https://stockrank.streamlit.app`. Put that
-link at the top of the README so a reviewer can see the work without cloning
-anything.
+Streamlit Cloud installs from `requirements.txt`, not `pyproject.toml`. It leaves out torch, shap and yfinance because the hosted app only reads pre-computed artifacts.
 
-**Why a separate `requirements.txt` exists.** Streamlit Cloud installs from it
-rather than from `pyproject.toml`, and it deliberately omits `torch`, `shap` and
-`yfinance`. The hosted app only reads pre-computed artifacts, so pulling a
-600 MB deep learning wheel would slow every build for no benefit.
-
-**Memory.** Community Cloud allocates about 1 GB. Trimming
-`predictions.parquet` with `scripts/prepare_demo.py --tail-days 900` keeps the
-app comfortably inside that.
-
----
+Community Cloud allocates about 1 GB. `scripts/prepare_demo.py --tail-days 900` keeps `predictions.parquet` inside that.
 
 ## Docker
 
@@ -36,21 +20,17 @@ app comfortably inside that.
 docker compose -f docker/docker-compose.yml up --build
 ```
 
-- API: <http://localhost:8000/docs>
-- Dashboard: <http://localhost:8501>
+API on <http://localhost:8000/docs>, dashboard on <http://localhost:8501>.
 
-To run the research pipeline inside the container:
+Run the pipeline in the container:
 
 ```bash
 docker compose -f docker/docker-compose.yml --profile research run --rm research
 ```
 
-The image is multi-stage and installs the CPU-only build of PyTorch, which keeps
-it near 1 GB rather than 6 GB.
+Multi-stage build with CPU-only torch, about 1 GB.
 
----
-
-## Running the API alone
+## API
 
 ```bash
 pip install -e ".[api]"
@@ -59,28 +39,20 @@ uvicorn stockrank.api.main:app --host 0.0.0.0 --port 8000
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /health` | Liveness, plus which runs and models are loaded |
-| `GET /runs` | Completed runs found on disk |
-| `GET /runs/{run}/metrics` | Headline data, model, performance and significance statistics |
-| `GET /runs/{run}/features` | The exact feature contract the model expects, in order |
-| `GET /runs/{run}/screen` | Top longs and shorts on the most recent date in the sample |
-| `POST /score` | Score a batch of feature vectors and rank them cross-sectionally |
-
-Example:
+| `GET /health` | liveness, runs and models loaded |
+| `GET /runs` | completed runs on disk |
+| `GET /runs/{run}/metrics` | data, model, performance and significance stats |
+| `GET /runs/{run}/features` | feature contract the model expects, in order |
+| `GET /runs/{run}/screen` | top longs and shorts on the last date in the sample |
+| `POST /score` | score a batch of feature vectors and rank them |
 
 ```bash
-curl -s "localhost:8000/runs/baseline/screen?model=ensemble&n=10" | python -m json.tool
+curl -s "localhost:8000/runs/baseline/screen?model=lightgbm&n=10" | python -m json.tool
 ```
 
-The scoring endpoint deliberately warns when a single observation is submitted
-on its own. The model is trained to order a cross-section, so an isolated score
-carries very little meaning.
-
----
+A single score is not meaningful on its own. The model orders a cross-section.
 
 ## Scheduled refresh
-
-The pipeline is a single command, so a nightly refresh is a one-line cron entry:
 
 ```cron
 0 2 * * 1-5  cd /opt/stockrank && \
@@ -88,5 +60,4 @@ The pipeline is a single command, so a nightly refresh is a one-line cron entry:
   .venv/bin/python -m stockrank.cli run --config configs/default.yaml
 ```
 
-Ingestion is incremental and resumable, so a failed night costs one retry rather
-than a full re-download.
+Ingestion is incremental and resumable.

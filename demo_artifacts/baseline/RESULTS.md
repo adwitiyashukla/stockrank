@@ -1,18 +1,18 @@
 # Results: `baseline`
 
-> Every number below is **out of sample**. Models are fitted on a trailing window and scored on a later window they never saw, with the label horizon purged and an embargo applied at the boundary. Returns are net of commission, slippage and short financing.
+All figures are out of sample, net of commission, slippage and short financing.
 
 ## 1. Dataset
 
 - **Source**: yfinance, universe `sp500_pit`
 - **Period**: 2010-01-04 to 2026-06-29 (4,146 trading days)
 - **Cross-section**: 250 names, 12 GICS sectors, 952,019 rows
-- **Point-in-time coverage**: 647 of 813 historical index members priced (79.6%). The remainder are delistings and acquisitions that Yahoo Finance no longer serves; this residual survivorship bias is discussed in section 8.
+- **Point-in-time coverage**: 647 of 813 historical index members priced (79.6%)
 - **Features**: 36 cross-sectionally normalised factors, target = forward_excess_return over 21 days with a 1-day execution lag
 
 ## 2. Forecast quality
 
-The information coefficient is the daily cross-sectional Spearman correlation between forecast and realised forward return. For daily equity signals, a mean IC of 0.02 to 0.04 is the range that supports a real strategy; anything above 0.10 in a backtest of this type is nearly always a leak.
+IC is the daily cross-sectional Spearman correlation between forecast and realised forward return.
 
 | model | mean IC | ICIR | t (Newey-West) | Q5-Q1 | OOS R2 | fit (s) |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -24,8 +24,6 @@ The information coefficient is the daily cross-sectional Spearman correlation be
 | factor_composite | -0.0127 | -0.8844 | -0.5170 | -0.0089 | -21.7247 | 0.0000 |
 
 ![Information coefficient by model](../../reports/figures/baseline/ic_by_model.png)
-
-Stability across folds matters more than the average. A signal that is strong in two folds and negative in three is not a signal.
 
 ![IC by fold](../../reports/figures/baseline/ic_by_fold.png)
 
@@ -57,14 +55,14 @@ Construction: rank_long_short, 25 long and 25 short, dollar neutral, gross lever
 
 Best strategy by Sharpe: **lightgbm**
 
-- **Deflated Sharpe Ratio**: 0.623. Observed annualised Sharpe 1.06, versus a selection-adjusted threshold of 0.94 implied by 60 effective trials. Values above 0.95 are conventionally treated as evidence the result is not a product of the search.
+- **Deflated Sharpe Ratio**: 0.623. Observed annualised Sharpe 1.06, versus a selection-adjusted threshold of 0.94 implied by 60 trials.
 - **Stationary bootstrap 95% CI for the Sharpe**: [0.29, 1.83], P(Sharpe <= 0) = 0.003.
-- **Probability of backtest overfitting** (CSCV over 6 candidate strategies, 70 splits): 0.029. Below 0.5 means the in-sample winner tends to stay above median out of sample.
+- **Probability of backtest overfitting** (CSCV over 6 candidate strategies, 70 splits): 0.029.
 - **Randomisation test**: shuffling forecasts within each date 100 times gives p = 0.010.
 
 ### Factor attribution
 
-Regression of daily strategy excess returns on the Fama-French five factors plus momentum, with Newey-West standard errors. The intercept is what is left after cheap factor exposure is stripped out.
+Daily strategy excess returns regressed on the Fama-French five factors plus momentum, Newey-West standard errors.
 
 | strategy | alpha (ann.) | t(alpha) HAC | R2 | b_mkt | b_smb | b_hml | b_mom |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -79,7 +77,7 @@ Regression of daily strategy excess returns on the Fama-French five factors plus
 
 ## 5. Implementability
 
-Sharpe ratio as a function of the assumed one-way cost. The break-even point is the honest test of whether a signal is tradable outside a simulation.
+Sharpe as a function of the assumed one-way cost.
 
 | cost (bp) | ann. return | Sharpe |
 | --- | --- | --- |
@@ -100,7 +98,7 @@ Sharpe ratio as a function of the assumed one-way cost. The break-even point is 
 
 ## 7. Volatility forecasting study
 
-Return levels are close to unpredictable; return variance is not. GARCH(1,1) with Student-t errors, HAR-RV and RiskMetrics EWMA are compared out of sample using QLIKE, which is robust to the fact that true variance is unobservable.
+GARCH(1,1) with Student-t errors, HAR-RV and EWMA compared out of sample under QLIKE.
 
 | metric | mean across names |
 | --- | --- |
@@ -115,14 +113,12 @@ Return levels are close to unpredictable; return variance is not. GARCH(1,1) wit
 
 ## 8. Limitations
 
-Stated plainly, because a results document that lists none is not credible.
-
-1. **Residual survivorship bias.** Index membership is reconstructed point in time, but 20% of historical members cannot be priced because Yahoo Finance drops delisted securities. The surviving sample is therefore mildly favourable, and the true out-of-sample edge is likely a little lower than reported.
-2. **No market impact model.** Costs are linear in turnover. At institutional size, impact is concave in participation rate and would bite harder than a flat basis-point charge.
-3. **Close-to-close execution.** Fills are assumed at the closing price with a one-day lag. Real execution against the close carries auction risk not modelled here.
-4. **Price and volume data only.** No fundamentals, no analyst revisions, no short interest, no options-implied information. Those are the natural next inputs.
-5. **One market, one regime set.** US large caps only. The result should not be assumed to transfer to small caps or non-US markets without re-testing.
-6. **Multiple testing is bounded, not eliminated.** The deflated Sharpe ratio uses an assumed trial count. Every configuration ever run adds to the true count, and human judgement about which configurations to try is itself a form of fitting.
+1. About 20% of historical index members cannot be priced, so some survivorship bias remains.
+2. Costs are linear in turnover, no market impact model.
+3. Fills assumed at the close with a one-day lag.
+4. Price and volume only, no fundamentals, revisions or short interest.
+5. US large caps only.
+6. The deflated Sharpe uses an assumed trial count, so multiple testing is bounded but not eliminated.
 
 ## 9. Reproducing this run
 

@@ -1,9 +1,3 @@
-"""The tests that matter most.
-
-Every other metric in this repository is meaningless if a future value can reach
-a feature or a training row. These tests attack that directly.
-"""
-
 from __future__ import annotations
 
 import numpy as np
@@ -17,13 +11,6 @@ from stockrank.validation.splitters import PurgedWalkForward
 
 
 def test_features_are_causal(market_data, small_config):
-    """Corrupting the future must not change any feature stamped in the past.
-
-    This is the strongest available check: rebuild every feature on a panel whose
-    final 60 days have been multiplied by 3, and assert that nothing before the
-    corruption changed. A single ``shift(-1)`` anywhere in the feature code makes
-    this fail.
-    """
     md = market_data
     close = md.close_matrix().astype("float64")
     high = md.panel.pivot(index="date", columns="ticker", values="high").astype("float64")
@@ -54,7 +41,6 @@ def test_features_are_causal(market_data, small_config):
 
 
 def test_forward_return_matches_manual_calculation(price_matrix):
-    """The label must be exactly close[t+lag+h]/close[t+lag]-1, no more, no less."""
     h, lag = 5, 1
     fwd = forward_return(price_matrix, h, lag=lag)
     col = price_matrix.columns[0]
@@ -66,14 +52,12 @@ def test_forward_return_matches_manual_calculation(price_matrix):
 
 
 def test_label_tail_is_nan(price_matrix):
-    """The last lag+h rows cannot have a label; if they do, something wrapped around."""
     h, lag = 5, 1
     fwd = forward_return(price_matrix, h, lag=lag)
     assert fwd.iloc[-(h + lag) :].isna().all().all()
 
 
 def test_execution_lag_is_applied(price_matrix):
-    """A 1-day lag must produce a different label from a 0-day lag."""
     a = forward_return(price_matrix, 5, lag=0)
     b = forward_return(price_matrix, 5, lag=1)
     common = np.isfinite(a.to_numpy()) & np.isfinite(b.to_numpy())
@@ -100,7 +84,6 @@ def test_purged_splits_never_overlap(feature_set, horizon, embargo):
         assert not (train_dates & test_dates), "train and test share dates"
         assert max(train_dates) < min(test_dates), "training extends past the test start"
 
-        # The gap must cover at least the label horizon plus the execution lag.
         uniq = pd.DatetimeIndex(sorted(dates.unique()))
         gap = uniq.get_loc(min(test_dates)) - uniq.get_loc(max(train_dates))
         assert gap >= horizon + 1, f"purge gap of {gap} days is shorter than the {horizon}d label"

@@ -1,11 +1,3 @@
-"""Turn a ``MarketData`` object into a modelling matrix.
-
-The output is deliberately boring: one row per (date, ticker), one column per
-feature, one target column, plus the raw forward return the backtest needs. All
-the subtlety lives upstream in ``technical.py`` (backward looking only) and
-``labels.py`` (the only place a forward shift is allowed).
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -29,7 +21,6 @@ AUX_COLS = ["sector", "target", "fwd_return", "close", "dollar_volume"]
 
 @dataclass
 class FeatureSet:
-    """Modelling matrix plus the metadata needed to interpret and audit it."""
 
     frame: pd.DataFrame
     feature_names: list[str]
@@ -94,7 +85,6 @@ def build_feature_set(md: MarketData, cfg: Config, execution_lag: int = 1) -> Fe
         for name in feature_names
     }
 
-    # A row is usable only if the target exists and most features are present.
     stacked_valid = np.zeros(close.shape, dtype=np.int16)
     for name in feature_names:
         stacked_valid += np.isfinite(norm[name].to_numpy(dtype="float32")).astype(np.int16)
@@ -113,8 +103,6 @@ def build_feature_set(md: MarketData, cfg: Config, execution_lag: int = 1) -> Fe
         "fwd_return": fwd.to_numpy(dtype="float32").ravel()[flat],
         "close": close.to_numpy(dtype="float32").ravel()[flat],
         "dollar_volume": dollar_volume.to_numpy(dtype="float32").ravel()[flat],
-        # Raw (un-normalised) risk characteristics the backtester needs to build a
-        # market-neutral book. These are inputs to construction, not to the model.
         "beta_raw": raw["beta_63"].to_numpy(dtype="float32").ravel()[flat],
         "vol_raw": raw["vol_63"].to_numpy(dtype="float32").ravel()[flat],
     }
@@ -132,14 +120,11 @@ def build_feature_set(md: MarketData, cfg: Config, execution_lag: int = 1) -> Fe
         frame["sector"] = "Unknown"
     frame["sector"] = frame["sector"].astype("category")
 
-    # Remaining gaps are filled with the cross-sectional median of the day: for a
-    # normalised feature that is zero by construction, i.e. "no view".
     frame[feature_names] = frame[feature_names].fillna(0.0)
 
     if cfg.portfolio.sector_neutral:
         frame = sector_neutralise(frame, feature_names)
 
-    # Drop thin dates that cannot support a meaningful cross-sectional ranking.
     counts = frame.groupby("date", observed=True)["ticker"].transform("size")
     before = len(frame)
     frame = frame[counts >= cfg.data.min_names_per_date].reset_index(drop=True)

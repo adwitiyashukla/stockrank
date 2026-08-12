@@ -1,5 +1,3 @@
-"""Artifact loading for the dashboard. Pure reads, heavily cached."""
-
 from __future__ import annotations
 
 import json
@@ -76,7 +74,6 @@ def load_run(path_str: str) -> dict[str, Any]:
 
 @st.cache_data(show_spinner=False)
 def load_predictions(path_str: str, tail_days: int = 400) -> pd.DataFrame:
-    """Predictions are the largest artifact; load only the recent tail by default."""
     p = Path(path_str) / "predictions.parquet"
     if not p.exists():
         return pd.DataFrame()

@@ -29,7 +29,6 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Local run logs
 run_*.log
 run_*.err
 data_fetch*.log

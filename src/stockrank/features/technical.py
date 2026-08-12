@@ -1,12 +1,3 @@
-"""Time-series feature construction on wide (date x ticker) matrices.
-
-Everything here obeys one rule: a feature stamped at date ``t`` may only use
-information observable at the close of ``t``. Rolling windows are therefore
-strictly backward looking and no ``shift(-k)`` appears anywhere in this module.
-The label module owns all forward-looking transforms, which keeps the leakage
-surface confined to a single small file that is covered by dedicated tests.
-"""
-
 from __future__ import annotations
 
 import numpy as np
@@ -25,13 +16,12 @@ def _safe_div(a: pd.DataFrame, b: pd.DataFrame | pd.Series) -> pd.DataFrame:
 
 
 def momentum_features(logret: pd.DataFrame, windows: list[int]) -> dict[str, pd.DataFrame]:
-    """Cumulative log returns over several horizons, plus the classic 12-1 spread."""
     out: dict[str, pd.DataFrame] = {}
     cum = logret.cumsum()
     for w in windows:
         out[f"ret_{w}"] = cum - cum.shift(w)
     if 252 in windows and 21 in windows:
-        out["mom_12_1"] = (cum.shift(21) - cum.shift(252))  # skip the reversal month
+        out["mom_12_1"] = (cum.shift(21) - cum.shift(252))
     if 126 in windows and 21 in windows:
         out["mom_6_1"] = cum.shift(21) - cum.shift(126)
     return out
@@ -48,8 +38,6 @@ def volatility_features(
         out["vol_ratio"] = _safe_div(out[f"vol_{short}"], out[f"vol_{long}"])
 
     w = max(windows)
-    # Parkinson estimator: uses the intraday range, roughly five times more
-    # efficient than close-to-close for the same window length.
     hl = np.log(_safe_div(high, low)) ** 2
     out["parkinson_vol"] = np.sqrt(hl.rolling(w, min_periods=w // 2).mean() / (4 * np.log(2)))
     out["downside_vol"] = logret.where(logret < 0).rolling(w, min_periods=w // 2).std()
@@ -83,7 +71,6 @@ def trend_features(
 
 
 def rsi(close: pd.DataFrame, window: int = 14) -> pd.DataFrame:
-    """Wilder's RSI, vectorised across the whole cross-section."""
     delta = close.diff()
     gain = delta.clip(lower=0.0)
     loss = (-delta).clip(lower=0.0)
@@ -116,7 +103,6 @@ def liquidity_features(
     ).mean()
     vol_mean = volume.rolling(long, min_periods=long // 2).mean()
     out["volume_ratio"] = _safe_div(volume, vol_mean)
-    # Amihud illiquidity: average price impact per dollar traded.
     illiq = _safe_div(logret.abs(), dollar_volume) * 1e9
     out["amihud_illiq"] = np.log1p(illiq.rolling(long, min_periods=long // 2).mean())
     return out
@@ -125,7 +111,6 @@ def liquidity_features(
 def market_relative_features(
     logret: pd.DataFrame, mkt_logret: pd.Series, window: int = 63
 ) -> dict[str, pd.DataFrame]:
-    """Rolling CAPM: beta, residual volatility, correlation and residual drift."""
     mp = max(window // 2, 20)
     var_m = mkt_logret.rolling(window, min_periods=mp).var()
     cov = logret.rolling(window, min_periods=mp).cov(mkt_logret)
@@ -159,7 +144,6 @@ def build_feature_matrices(
     mkt_return: pd.Series,
     cfg: FeatureConfig,
 ) -> dict[str, pd.DataFrame]:
-    """Assemble every raw feature as a wide ``date x ticker`` matrix."""
     logret = np.log(close).diff()
     mkt_logret = np.log1p(mkt_return.reindex(close.index)).ffill()
 

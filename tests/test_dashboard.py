@@ -1,11 +1,3 @@
-"""Dashboard smoke test.
-
-Streamlit's own AppTest harness executes the script exactly as the server would,
-so this catches import errors, bad column references and rendering exceptions
-without a browser. Skipped when no run artifacts are present, which is the case
-in a fresh clone before the pipeline has been executed.
-"""
-
 from __future__ import annotations
 
 from pathlib import Path

@@ -1,5 +1,3 @@
-"""Console logging with a consistent format across the pipeline."""
-
 from __future__ import annotations
 
 import logging

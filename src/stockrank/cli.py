@@ -1,5 +1,3 @@
-"""Command line interface."""
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -19,7 +17,6 @@ def run(
     smoke: bool = typer.Option(False, "--smoke", help="tiny run for CI"),
     report: bool = typer.Option(True, "--report/--no-report", help="write figures and RESULTS.md"),
 ) -> None:
-    """Run the full research pipeline."""
     setup_logging()
     from stockrank.experiment import run_experiment
 
@@ -38,11 +35,6 @@ def rebacktest(
     config: str = typer.Option("configs/default.yaml", "--config", "-c"),
     report: bool = typer.Option(True, "--report/--no-report"),
 ) -> None:
-    """Re-run backtest, evaluation and reporting from cached predictions.
-
-    Portfolio and cost assumptions do not affect the forecasts, so changing
-    leverage, the volatility target or the cost model does not need a refit.
-    """
     setup_logging()
     from stockrank.experiment import rerun_from_predictions
 
@@ -57,7 +49,6 @@ def rebacktest(
 
 @app.command()
 def fetch(config: str = typer.Option("configs/default.yaml", "--config", "-c")) -> None:
-    """Download and cache market data only."""
     setup_logging()
     from stockrank.data.loader import load_market_data
 
@@ -68,7 +59,6 @@ def fetch(config: str = typer.Option("configs/default.yaml", "--config", "-c")) 
 
 @app.command()
 def report(config: str = typer.Option("configs/default.yaml", "--config", "-c")) -> None:
-    """Rebuild figures and RESULTS.md from artifacts already on disk."""
     setup_logging()
     from stockrank.reporting import build_report_from_disk
 
@@ -79,7 +69,6 @@ def report(config: str = typer.Option("configs/default.yaml", "--config", "-c"))
 
 @app.command()
 def models() -> None:
-    """List available models."""
     from stockrank.models.registry import available_models
 
     typer.echo("\n".join(available_models()))
@@ -87,7 +76,6 @@ def models() -> None:
 
 @app.command("list-runs")
 def list_runs(artifacts: str = typer.Option("artifacts", "--artifacts")) -> None:
-    """Show completed runs, including the demo bundle shipped with the repository."""
     roots = [Path(artifacts), Path("demo_artifacts")]
     found = False
     for root in roots:
@@ -106,9 +94,9 @@ def list_runs(artifacts: str = typer.Option("artifacts", "--artifacts")) -> None
         )
 
 
-def main() -> None:  # pragma: no cover
+def main() -> None:
     app()
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":
     app()

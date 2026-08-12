@@ -1,5 +1,3 @@
-"""Configuration, simulator and data loading."""
-
 from __future__ import annotations
 
 import numpy as np
@@ -20,7 +18,6 @@ def test_every_shipped_config_parses():
 
 
 def test_rebalance_matches_label_horizon_in_shipped_configs():
-    """A mismatch would book returns the portfolio never earned."""
     from pathlib import Path
 
     for p in sorted(Path("configs").glob("*.yaml")):

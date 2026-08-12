@@ -1,11 +1,3 @@
-"""Backtest accounting.
-
-The toy market has a fixed per-name drift. A model that knows the drift should
-make money; the reverse of that model should lose it; and costs must strictly
-reduce the result. If any of those fail, the accounting has a sign or a scaling
-error somewhere.
-"""
-
 from __future__ import annotations
 
 import numpy as np
@@ -26,14 +18,13 @@ def toy_market():
     dates = pd.bdate_range("2020-01-01", periods=N_DAYS)
     tickers = [f"T{i:02d}" for i in range(N_TICKERS)]
 
-    drift = rng.normal(0.0, 0.0006, N_TICKERS)          # the thing to be discovered
+    drift = rng.normal(0.0, 0.0006, N_TICKERS)
     noise = rng.normal(0.0, 0.012, (N_DAYS, N_TICKERS))
     rets = pd.DataFrame(drift + noise, index=dates, columns=tickers)
 
     close = 100 * (1 + rets).cumprod()
     fwd = close.shift(-(1 + HORIZON)) / close.shift(-1) - 1
 
-    # A noisy but informative signal about the drift.
     signal = pd.DataFrame(
         drift + rng.normal(0.0, 0.0004, (N_DAYS, N_TICKERS)), index=dates, columns=tickers
     )
@@ -91,18 +82,10 @@ def test_costs_strictly_reduce_returns(toy_market):
 
 
 def test_returns_are_not_artificially_smooth(toy_market):
-    """Guards against the bug this engine was rewritten to fix.
-
-    Booking one lump return per holding period and spreading it evenly across the
-    days produces a series where consecutive days are identical, which inflates
-    the annualised Sharpe by roughly sqrt(horizon). Daily marking must produce a
-    series with many distinct values and no such smoothing.
-    """
     preds, rets = toy_market
     res = _run(preds, rets, beta_neutral=False)
     r = res.returns.dropna()
     assert r.nunique() > 0.9 * len(r), "returns look smoothed across the holding period"
-    # A repeated-value series has an autocorrelation near 1 at lag 1.
     assert abs(r.autocorr(lag=1)) < 0.5
 
 

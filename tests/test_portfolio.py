@@ -1,5 +1,3 @@
-"""Portfolio construction invariants."""
-
 from __future__ import annotations
 
 import numpy as np
@@ -51,7 +49,6 @@ def test_beta_neutrality_removes_net_beta(scores):
 
 
 def test_beta_neutrality_preserves_ordering_direction(scores):
-    """The projection removes market exposure; it must not invert the book."""
     rng = np.random.default_rng(3)
     beta = pd.Series(rng.normal(1.0, 0.2, len(scores)), index=scores.index)
     w = rank_long_short_weights(scores, 15, 15, 2.0, 1.0)
@@ -69,7 +66,6 @@ def test_full_construction_respects_gross_leverage(scores):
 
 def test_volatility_scalar_targets_the_right_level():
     rng = np.random.default_rng(5)
-    # Realised annual vol of 20% against a 10% target should halve the exposure.
     r = pd.Series(rng.normal(0, 0.20 / np.sqrt(252), 300))
     s = volatility_scalar(r, target_annual=0.10, lookback=252, cap=3.0)
     assert 0.4 < s < 0.65
@@ -82,6 +78,6 @@ def test_volatility_scalar_is_capped():
 
 def test_ledoit_wolf_is_positive_definite():
     rng = np.random.default_rng(6)
-    R = pd.DataFrame(rng.normal(size=(120, 60)))  # fewer rows than columns squared
+    R = pd.DataFrame(rng.normal(size=(120, 60)))
     cov = ledoit_wolf_cov(R)
     assert np.all(np.linalg.eigvalsh(cov) > -1e-10)

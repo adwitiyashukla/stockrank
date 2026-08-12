@@ -1,11 +1,3 @@
-"""Fama-French factor returns from the Ken French Data Library.
-
-These are the reference series academic finance uses, which lets the backtest
-answer the question a real allocator asks first: is this strategy doing anything
-that a cheap exposure to market, size, value, profitability, investment or
-momentum would not already have done?
-"""
-
 from __future__ import annotations
 
 import io
@@ -51,14 +43,13 @@ def _read_french_zip(url: str) -> pd.DataFrame:
     df = pd.DataFrame(rows, columns=header[: len(rows[0])])
     df["date"] = pd.to_datetime(df["date"], format="%Y%m%d")
     for c in df.columns[1:]:
-        df[c] = pd.to_numeric(df[c], errors="coerce") / 100.0  # French reports percent
+        df[c] = pd.to_numeric(df[c], errors="coerce") / 100.0
     return df.dropna().reset_index(drop=True)
 
 
 def load_fama_french(
     start: str, end: str, cache_dir: str | Path = "data/cache", include_momentum: bool = True
 ) -> pd.DataFrame:
-    """Daily FF5 factors (plus momentum), cached to parquet."""
     cache = ensure_dir(cache_dir)
     path = cache / "fama_french_daily.parquet"
     if path.exists():
@@ -72,7 +63,7 @@ def load_fama_french(
                 mom = _read_french_zip(MOM_URL)
                 mom.columns = ["date", "mom"]
                 ff = ff.merge(mom, on="date", how="left")
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.warning("Momentum factor unavailable (%s); continuing without it", exc)
         ff.to_parquet(path, index=False)
 

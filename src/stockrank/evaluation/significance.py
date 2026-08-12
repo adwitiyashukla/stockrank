@@ -1,26 +1,3 @@
-"""Is the backtest real, or did we just search hard enough to find noise?
-
-This module exists because a Sharpe ratio computed on the winning configuration
-of a search is not an estimate of anything. If you try forty model and parameter
-combinations on a fifteen-year sample, the best of them will show a Sharpe near
-0.8 even when every single one is worthless. The tools here quantify exactly that
-effect rather than hoping it away.
-
-* **Deflated Sharpe Ratio** (Bailey and Lopez de Prado, 2014) adjusts the observed
-  Sharpe for the number of trials, the non-normality of returns, and the sample
-  length. It answers: what is the probability the true Sharpe is above zero, given
-  that this was the best of N attempts?
-
-* **Probability of Backtest Overfitting** via combinatorially symmetric cross
-  validation. Split the sample into blocks, in every split pick the strategy that
-  looked best in sample, then check where it ranked out of sample. If the winner
-  routinely lands in the bottom half out of sample, the selection process is
-  fitting noise.
-
-* **Stationary bootstrap** confidence intervals, which resample blocks rather than
-  individual days so serial correlation is preserved.
-"""
-
 from __future__ import annotations
 
 from itertools import combinations
@@ -38,10 +15,9 @@ def _per_period_sharpe(returns: pd.Series) -> float:
 
 
 def expected_max_sharpe(n_trials: int, sharpe_variance: float) -> float:
-    """Expected maximum per-period Sharpe across ``n_trials`` worthless strategies."""
     if n_trials < 2 or not np.isfinite(sharpe_variance) or sharpe_variance <= 0:
         return 0.0
-    gamma = 0.5772156649  # Euler-Mascheroni
+    gamma = 0.5772156649
     z1 = stats.norm.ppf(1 - 1.0 / n_trials)
     z2 = stats.norm.ppf(1 - 1.0 / (n_trials * np.e))
     return float(np.sqrt(sharpe_variance) * ((1 - gamma) * z1 + gamma * z2))
@@ -50,7 +26,6 @@ def expected_max_sharpe(n_trials: int, sharpe_variance: float) -> float:
 def deflated_sharpe_ratio(
     returns: pd.Series, n_trials: int = 1, sharpe_variance: float | None = None
 ) -> dict[str, float]:
-    """Probability that the true Sharpe exceeds the selection-adjusted threshold."""
     r = pd.Series(returns).dropna()
     t = len(r)
     if t < 60:
@@ -61,7 +36,6 @@ def deflated_sharpe_ratio(
     kurt = float(stats.kurtosis(r, fisher=False))
 
     if sharpe_variance is None:
-        # Analytic variance of the Sharpe estimator under the observed moments.
         sharpe_variance = (1 - skew * sr + (kurt - 1) / 4 * sr**2) / (t - 1)
 
     sr_star = expected_max_sharpe(n_trials, sharpe_variance)
@@ -83,7 +57,6 @@ def deflated_sharpe_ratio(
 def probability_of_backtest_overfitting(
     returns_matrix: pd.DataFrame, n_splits: int = 8
 ) -> dict[str, float]:
-    """CSCV estimate of PBO across a family of candidate strategies."""
     R = returns_matrix.dropna(how="all").fillna(0.0)
     n_strategies = R.shape[1]
     if n_strategies < 2 or len(R) < n_splits * 20:
@@ -127,7 +100,6 @@ def probability_of_backtest_overfitting(
 def stationary_bootstrap_sharpe(
     returns: pd.Series, n_boot: int = 1000, mean_block: int = 20, seed: int = 0
 ) -> dict[str, float]:
-    """Bootstrap CI for the annualised Sharpe, preserving serial dependence."""
     r = pd.Series(returns).dropna().to_numpy()
     n = r.size
     if n < 100:
@@ -136,9 +108,6 @@ def stationary_bootstrap_sharpe(
     rng = np.random.default_rng(seed)
     p = 1.0 / max(mean_block, 1)
 
-    # Vectorised over replicates: the recursion still walks the sample once, but
-    # each step advances all n_boot chains at the same time. This is a hundred
-    # times faster than the obvious double loop and produces the same draws.
     starts = rng.integers(0, n, size=(n_boot, n))
     new_block = rng.random((n_boot, n)) < p
     idx = np.empty((n_boot, n), dtype=np.int64)
@@ -165,12 +134,6 @@ def stationary_bootstrap_sharpe(
 def randomisation_test(
     predictions: pd.DataFrame, score_col: str, n_permutations: int = 200, seed: int = 0
 ) -> dict[str, float]:
-    """Shuffle predictions within each date and recompute the IC.
-
-    Under the null that the model has no cross-sectional information, shuffling
-    changes nothing. The p-value is the fraction of shuffles whose IC beats the
-    real one. This is a distribution-free check that costs nothing to run.
-    """
     from stockrank.evaluation.metrics import matrix_ic
 
     rng = np.random.default_rng(seed)
@@ -179,8 +142,6 @@ def randomisation_test(
     targ_w = df.pivot_table(index="date", columns="ticker", values="target", observed=True)
     actual = float(matrix_ic(pred_w, targ_w).mean())
 
-    # Shuffling within a date is a row-wise permutation of the wide matrix, which
-    # numpy does by sorting random keys. No Python-level loop over groups.
     values = pred_w.to_numpy()
     valid = np.isfinite(values)
     beats = 0
@@ -188,7 +149,6 @@ def randomisation_test(
         keys = np.where(valid, rng.random(values.shape), np.inf)
         order = np.argsort(keys, axis=1)
         shuffled = np.take_along_axis(values, order, axis=1)
-        # Put the non-finite slots back where they were so the mask is unchanged.
         shuffled = np.where(valid, shuffled, np.nan)
         ic = float(matrix_ic(pd.DataFrame(shuffled, index=pred_w.index, columns=pred_w.columns), targ_w).mean())
         if ic >= actual:

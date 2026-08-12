@@ -1,15 +1,3 @@
-"""Standalone data acquisition.
-
-Downloading fifteen years of daily bars for a few hundred tickers is the slowest
-part of the project and the part most likely to be interrupted, so it lives in
-its own resumable script. Everything lands in ``data/cache`` as parquet; rerunning
-after a failure only fetches what is still missing.
-
-Usage
------
-    python scripts/fetch_data.py --config configs/default.yaml
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -20,9 +8,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from stockrank.config import load_config  # noqa: E402
-from stockrank.data.loader import load_market_data  # noqa: E402
-from stockrank.utils.logging import get_logger, setup_logging  # noqa: E402
+from stockrank.config import load_config
+from stockrank.data.loader import load_market_data
+from stockrank.utils.logging import get_logger, setup_logging
 
 logger = get_logger("fetch_data")
 

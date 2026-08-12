@@ -1,5 +1,3 @@
-"""Single entry point that turns a config into a clean, analysis-ready panel."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -15,17 +13,16 @@ from stockrank.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-MAX_ABS_DAILY_RETURN = 1.0  # 100% in one session almost always means a bad adjustment
+MAX_ABS_DAILY_RETURN = 1.0
 
 
 @dataclass
 class MarketData:
-    """Everything downstream stages need, in one immutable-ish container."""
 
-    panel: pd.DataFrame  # date, ticker, sector, open, high, low, close, volume, dollar_volume
-    market: pd.DataFrame  # date, mkt_return, rf_rate
-    factors: pd.DataFrame | None = None  # Fama-French daily factors
-    pit_membership: pd.DataFrame | None = None  # date, ticker
+    panel: pd.DataFrame
+    market: pd.DataFrame
+    factors: pd.DataFrame | None = None
+    pit_membership: pd.DataFrame | None = None
     quality: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -54,7 +51,6 @@ class MarketData:
         }
 
 
-# --------------------------------------------------------------------- cleaning
 def _apply_quality_filters(panel: pd.DataFrame, cfg: Config) -> tuple[pd.DataFrame, dict]:
     dc = cfg.data
     q: dict[str, Any] = {}
@@ -64,7 +60,6 @@ def _apply_quality_filters(panel: pd.DataFrame, cfg: Config) -> tuple[pd.DataFra
     panel = panel.sort_values(["ticker", "date"])
     panel["ret"] = panel.groupby("ticker", sort=False)["close"].pct_change()
 
-    # Suspicious returns usually indicate an unadjusted corporate action.
     bad = panel["ret"].abs() > MAX_ABS_DAILY_RETURN
     q["n_suspicious_returns"] = int(bad.sum())
     offenders = panel.loc[bad, "ticker"].value_counts()
@@ -74,13 +69,11 @@ def _apply_quality_filters(panel: pd.DataFrame, cfg: Config) -> tuple[pd.DataFra
     panel = panel[~panel["ticker"].isin(drop_tickers)]
     q["n_tickers_dropped_bad_returns"] = len(drop_tickers)
 
-    # Price floor removes penny stocks where the bid-ask spread dominates any signal.
     med_price = panel.groupby("ticker")["close"].median()
     keep = set(med_price[med_price >= dc.min_price].index)
     q["n_tickers_dropped_price_floor"] = int(panel["ticker"].nunique() - len(keep))
     panel = panel[panel["ticker"].isin(keep)]
 
-    # History floor: a model that needs 252 days of features cannot use a 60-day listing.
     counts = panel.groupby("ticker")["date"].size()
     keep = set(counts[counts >= dc.min_history_days].index)
     q["n_tickers_dropped_short_history"] = int(panel["ticker"].nunique() - len(keep))
@@ -88,8 +81,6 @@ def _apply_quality_filters(panel: pd.DataFrame, cfg: Config) -> tuple[pd.DataFra
 
     panel["dollar_volume"] = panel["close"] * panel["volume"]
 
-    # Liquidity cap keeps the panel inside a laptop's memory budget and keeps the
-    # investable universe honest: these are names you could actually trade.
     if dc.max_assets and panel["ticker"].nunique() > dc.max_assets:
         adv = panel.groupby("ticker")["dollar_volume"].median().sort_values(ascending=False)
         keep = set(adv.head(dc.max_assets).index)
@@ -114,7 +105,6 @@ def _downcast(panel: pd.DataFrame) -> pd.DataFrame:
     return panel
 
 
-# ------------------------------------------------------------------- assembling
 def _load_real(cfg: Config) -> MarketData:
     from stockrank.data.providers import download_benchmark, download_prices
     from stockrank.data.universe import fetch_sp500_tables, resolve_universe
@@ -127,11 +117,10 @@ def _load_real(cfg: Config) -> MarketData:
 
     panel, report = download_prices(tickers, dc.start, dc.end, cache_dir=dc.cache_dir)
 
-    # GICS sectors from the current constituent table; unmatched names get "Unknown".
     try:
         current, _ = fetch_sp500_tables(dc.cache_dir)
         sector_map = dict(zip(current["ticker"], current["sector"], strict=False))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("Sector metadata unavailable (%s)", exc)
         sector_map = {}
     panel["sector"] = panel["ticker"].map(sector_map).fillna("Unknown")
@@ -151,7 +140,7 @@ def _load_real(cfg: Config) -> MarketData:
             market = market.merge(factors[["date", "rf"]], on="date", how="left")
             market = market.rename(columns={"rf": "rf_rate"})
             market["rf_rate"] = market["rf_rate"].ffill().fillna(0.0)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("Fama-French factors unavailable (%s); using a flat risk-free rate", exc)
     if "rf_rate" not in market.columns:
         market["rf_rate"] = 0.02 / 252
@@ -174,7 +163,6 @@ def _load_synthetic(cfg: Config) -> MarketData:
 
 
 def load_market_data(cfg: Config, cache: bool = True) -> MarketData:
-    """Build (or reload) the market panel described by ``cfg``."""
     cache_path = Path(cfg.data.cache_dir) / f"panel_{cfg.run.name}.parquet"
     mkt_path = Path(cfg.data.cache_dir) / f"market_{cfg.run.name}.parquet"
 
@@ -183,15 +171,13 @@ def load_market_data(cfg: Config, cache: bool = True) -> MarketData:
         panel = pd.read_parquet(cache_path)
         market = pd.read_parquet(mkt_path)
 
-        # Factors are cheap to reload and the evaluation stage needs them for
-        # attribution, so the cache path must not silently drop them.
         factors = None
         if cfg.data.use_fama_french:
             try:
                 from stockrank.data.factors import load_fama_french
 
                 factors = load_fama_french(cfg.data.start, cfg.data.end, cache_dir=cfg.data.cache_dir)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.warning("Fama-French factors unavailable on the cache path (%s)", exc)
 
         summary_path = Path(cfg.data.cache_dir) / f"data_summary_{cfg.run.name}.json"
@@ -202,7 +188,7 @@ def load_market_data(cfg: Config, cache: bool = True) -> MarketData:
 
                 cached = json.loads(summary_path.read_text(encoding="utf-8"))
                 quality["download"] = cached.get("download", {})
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
         return MarketData(
             panel=_downcast(panel), market=market, factors=factors, quality=quality
@@ -220,7 +206,6 @@ def load_market_data(cfg: Config, cache: bool = True) -> MarketData:
 
 
 def align_calendar(panel: pd.DataFrame, min_names: int = 20) -> pd.DataFrame:
-    """Drop dates with too thin a cross-section to rank meaningfully."""
     counts = panel.groupby("date")["ticker"].size()
     good = set(counts[counts >= min_names].index)
     removed = len(counts) - len(good)

@@ -1,5 +1,3 @@
-"""Common interface every forecaster in the zoo implements."""
-
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -10,12 +8,6 @@ import pandas as pd
 
 
 class BaseForecaster(ABC):
-    """Minimal contract: fit on a training frame, score any frame.
-
-    Models receive the *frame* rather than a bare matrix because sequence models
-    need the date and ticker columns to reconstruct histories, while tabular
-    models only touch the feature columns.
-    """
 
     name: str = "base"
     supports_importance: bool = False
@@ -38,5 +30,5 @@ class BaseForecaster(ABC):
         if not self.fitted_:
             raise RuntimeError(f"{self.name} has not been fitted")
 
-    def __repr__(self) -> str:  # pragma: no cover - cosmetic
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name={self.name!r}, n_features={len(self.feature_names)})"

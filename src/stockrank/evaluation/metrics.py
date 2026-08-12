@@ -1,18 +1,3 @@
-"""Forecast quality metrics for cross-sectional prediction.
-
-The headline number is the **information coefficient**: the cross-sectional rank
-correlation between the forecast and the realised forward return, computed date
-by date and then averaged. This is the right metric here and R-squared is not,
-for a specific reason. A model that predicts every stock will return roughly the
-market has a decent R-squared and is worth nothing to a market-neutral book. A
-model with an R-squared indistinguishable from zero but a stable IC of 0.02 is a
-viable strategy. What is being traded is the ordering.
-
-``ICIR`` (mean IC divided by its standard deviation, annualised) is the more
-useful summary because it captures consistency, and consistency is what survives
-transaction costs.
-"""
-
 from __future__ import annotations
 
 import numpy as np
@@ -30,7 +15,6 @@ def daily_ic(
     dates: pd.Series,
     method: str = "spearman",
 ) -> pd.Series:
-    """Cross-sectional IC for every date."""
     df = pd.DataFrame(
         {"date": pd.to_datetime(pd.Series(dates).to_numpy()),
          "p": np.asarray(pred, dtype=float),
@@ -48,13 +32,6 @@ def daily_ic(
 
 
 def ic_summary(ic: pd.Series, label_horizon: int = 5) -> dict[str, float]:
-    """Summarise a series of daily ICs.
-
-    ``n_effective`` corrects for the fact that overlapping ``h``-day labels make
-    consecutive ICs dependent, so the naive t-statistic is inflated by roughly
-    sqrt(h). The Newey-West t-statistic in the same dict handles this properly and
-    is the one to quote.
-    """
     ic = pd.Series(ic).dropna()
     if ic.empty:
         return {k: np.nan for k in ("mean_ic", "std_ic", "icir", "t_stat", "t_stat_nw", "hit_rate", "n_obs")}
@@ -74,12 +51,6 @@ def ic_summary(ic: pd.Series, label_horizon: int = 5) -> dict[str, float]:
 def quantile_spread(
     pred: np.ndarray, fwd_return: np.ndarray, dates: pd.Series, n_quantiles: int = 5
 ) -> pd.DataFrame:
-    """Mean forward return per prediction quantile: the classic factor decile chart.
-
-    Monotonicity across quantiles is a much stronger claim than a positive IC. A
-    signal can have a positive IC driven entirely by one extreme bucket, which is
-    fragile; a monotone ladder is what a real factor looks like.
-    """
     df = pd.DataFrame(
         {"date": pd.to_datetime(pd.Series(dates).to_numpy()),
          "p": np.asarray(pred, dtype=float),
@@ -129,12 +100,6 @@ def prediction_metrics(
 
 
 def matrix_ic(feature: pd.DataFrame, target: pd.DataFrame) -> pd.Series:
-    """Row-wise (per-date) Spearman IC between two aligned wide matrices.
-
-    Vectorised: rank once, then compute the row correlation in numpy. Roughly two
-    orders of magnitude faster than a groupby-apply over the long frame, which
-    matters when screening dozens of features across several horizons.
-    """
     f, t = feature.align(target, join="inner")
     both = np.isfinite(f.to_numpy()) & np.isfinite(t.to_numpy())
     fm = f.where(both)

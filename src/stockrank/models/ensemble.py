@@ -1,17 +1,3 @@
-"""Combining forecasts.
-
-Rank averaging is the default and it is not laziness. The members produce scores
-on incomparable scales: ridge outputs something close to an expected return, a
-gradient boosted tree outputs a shrunken conditional mean, a neural network
-outputs whatever its last linear layer happens to produce. Only the *ordering*
-matters for a rank-based long/short book, so converting each member to a
-cross-sectional rank before averaging is both scale free and outlier proof.
-
-The alternative, a ridge stack, is also provided. It is fitted strictly on
-out-of-fold predictions, because stacking on in-sample predictions is one of the
-classic silent ways to leak.
-"""
-
 from __future__ import annotations
 
 import numpy as np
@@ -44,7 +30,6 @@ def rank_average(
 
 
 class RidgeStack:
-    """Meta-learner over out-of-fold member predictions."""
 
     def __init__(self, members: list[str]) -> None:
         self.members = members

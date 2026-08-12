@@ -1,28 +1,3 @@
-"""Daily backtest with explicit, conservative cost assumptions.
-
-What this engine does and does not claim
-----------------------------------------
-It is a *portfolio* backtester, not an execution simulator. Positions are marked
-against daily closes and trades are assumed to fill at the close with a linear
-cost. It does not model the order book, queue position, or market impact beyond a
-fixed slippage term. That is the honest scope, and it is the standard scope for
-research at this horizon.
-
-What it does model, because ignoring these is how backtests lie:
-
-* **A one-day execution lag**, already baked into the label, so a signal formed on
-  the close of day t is traded into on day t+1.
-* **Turnover-proportional costs**, charged on the change in weights, not on gross
-  exposure. Commission plus half-spread plus slippage, in basis points per unit
-  of one-way turnover.
-* **Short financing.** Borrowing stock is not free; a flat annual rate is charged
-  on the short leg every day it is held.
-* **A turnover cap**, which blends the target book towards the current book when
-  the model wants to trade more than the cap allows. Without it, a high-frequency
-  signal shows enormous gross returns and negative net returns.
-* **Volatility targeting on trailing data only**, recomputed on each rebalance.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -42,14 +17,13 @@ TRADING_DAYS = 252
 
 @dataclass
 class BacktestResult:
-    """Daily series and summary statistics for one strategy run."""
 
-    returns: pd.Series  # net of costs
+    returns: pd.Series
     gross_returns: pd.Series
     costs: pd.Series
     turnover: pd.Series
-    exposure: pd.DataFrame  # gross, net, n_long, n_short, vol_scalar
-    weights: pd.DataFrame  # date x ticker
+    exposure: pd.DataFrame
+    weights: pd.DataFrame
     stats: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -81,26 +55,6 @@ def run_backtest(
     daily_returns: pd.DataFrame | None = None,
     label_horizon: int | None = None,
 ) -> BacktestResult:
-    """Simulate the strategy implied by ``score_col``, marking to market daily.
-
-    Timing, spelled out because it is where backtests usually cheat:
-
-    * A score stamped on date ``d`` is formed from the close of ``d``.
-    * The book is traded into at the close of ``d + 1``. Costs are charged there.
-    * Profit and loss accrues daily from the close of ``d + 1`` to the close of
-      ``d + 1 + horizon``, using the actual daily returns of each holding.
-    * The next rebalance happens on ``d + horizon``.
-
-    Marking daily rather than booking one lump return per period matters a great
-    deal for the statistics. Spreading a single period return evenly across its
-    days produces an artificially smooth series whose annualised Sharpe is
-    inflated by roughly the square root of the holding period. Here every day
-    carries its own realised return, so the volatility, the drawdowns and the
-    Sharpe ratio are all computed on genuinely independent observations.
-
-    Positions are held at fixed weights rather than allowed to drift, which is
-    what a leverage-targeted book does in practice.
-    """
     scores = _pivot(predictions, score_col)
     fwd = _pivot(predictions, "fwd_return")
     betas = _pivot(predictions, "beta_raw") if "beta_raw" in predictions.columns else None
@@ -175,7 +129,6 @@ def run_backtest(
         if first_active is None:
             first_active = entry
 
-        # Costs land on the day the book is actually traded into.
         daily_cost.iloc[entry] += turnover * cost_rate
         turnover_s.iloc[entry] = turnover
 

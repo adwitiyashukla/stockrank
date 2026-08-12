@@ -1,5 +1,3 @@
-"""Small helpers for reading and writing pipeline artifacts."""
-
 from __future__ import annotations
 
 import json

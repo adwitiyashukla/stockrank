@@ -1,23 +1,3 @@
-"""Recurrent and attention sequence models over per-stock feature histories.
-
-Why a sequence model at all
----------------------------
-Tabular models see one row: today's 36 factor exposures. A sequence model sees
-the last forty days of those exposures for that name, so it can in principle
-learn *paths* rather than points, for example momentum that is accelerating
-versus momentum that is rolling over. Whether that extra capacity pays for itself
-on a 2% signal-to-noise problem is an empirical question, and this repository
-answers it honestly rather than assuming the answer is yes.
-
-Memory design
--------------
-Materialising every (ticker, window) pair as its own array would need
-``n_samples * seq_len * n_features`` floats, roughly 30 GB for a full run. Instead
-the features live once in a dense ``(n_dates, n_tickers, n_features)`` tensor and
-each sample is a *view* into it, assembled at batch time. Peak memory for a full
-run stays around 200 MB, which is what makes this trainable on an 8 GB laptop.
-"""
-
 from __future__ import annotations
 
 import numpy as np
@@ -30,7 +10,6 @@ logger = get_logger(__name__)
 
 
 class PanelTensor:
-    """Dense ``(date, ticker, feature)`` cube plus fast lookup of valid samples."""
 
     def __init__(self, frame: pd.DataFrame, feature_names: list[str]) -> None:
         self.feature_names = list(feature_names)
@@ -57,10 +36,9 @@ class PanelTensor:
         return di.astype(np.int32), ti.astype(np.int32)
 
     def gather(self, di: np.ndarray, ti: np.ndarray, seq_len: int) -> np.ndarray:
-        """Return ``(n, seq_len, n_features)`` windows ending at each ``di``."""
         offsets = np.arange(-seq_len + 1, 1)
         rows = di[:, None] + offsets[None, :]
-        np.clip(rows, 0, len(self.dates) - 1, out=rows)  # pad the start by repeating
+        np.clip(rows, 0, len(self.dates) - 1, out=rows)
         return self.cube[rows, ti[:, None], :]
 
 
@@ -69,7 +47,7 @@ def _require_torch():
         import torch
 
         return torch
-    except ImportError as exc:  # pragma: no cover
+    except ImportError as exc:
         raise ImportError(
             "PyTorch is required for sequence models. Install with: pip install -e '.[deep]'"
         ) from exc
@@ -105,7 +83,6 @@ def _build_module(kind: str, n_features: int, params: dict):
             return self.head(self.norm(out[:, -1, :])).squeeze(-1)
 
     class AttentionHead(nn.Module):
-        """Small transformer encoder with learned positional embeddings."""
 
         def __init__(self, seq_len: int) -> None:
             super().__init__()
@@ -134,7 +111,6 @@ def _build_module(kind: str, n_features: int, params: dict):
 
 
 class SequenceForecaster(BaseForecaster):
-    """GRU, LSTM or small transformer trained to rank the cross-section."""
 
     supports_importance = False
 
@@ -145,7 +121,6 @@ class SequenceForecaster(BaseForecaster):
         self.tensor_: PanelTensor | None = None
 
     def attach_tensor(self, tensor: PanelTensor) -> SequenceForecaster:
-        """Share one cube across folds instead of rebuilding it every time."""
         self.tensor_ = tensor
         return self
 
@@ -176,8 +151,6 @@ class SequenceForecaster(BaseForecaster):
         y = y[ok]
         di, ti = tensor.positions(sub)
 
-        # Chronological split for early stopping: the last 12% of the training
-        # window validates the first 88%. Still entirely inside the fold.
         order = np.argsort(di, kind="stable")
         di, ti, y = di[order], ti[order], y[order]
         cut = int(len(y) * 0.88)
@@ -193,7 +166,6 @@ class SequenceForecaster(BaseForecaster):
             va_idx = rng.choice(va_idx, size=40_000, replace=False)
             va_idx.sort()
 
-        # Scale the target to unit variance so the learning rate is transferable.
         self.y_scale_ = float(np.std(y[tr_idx])) or 1.0
 
         model = _build_module(self.kind, len(self.feature_names), p)

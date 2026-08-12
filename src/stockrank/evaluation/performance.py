@@ -1,5 +1,3 @@
-"""Portfolio performance statistics."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -41,7 +39,6 @@ def performance_stats(
     max_dd = float(dd.min())
     calmar = float(ann_ret / abs(max_dd)) if max_dd < 0 else np.nan
 
-    # Longest stretch below the previous high-water mark, in trading days.
     under = (dd < -1e-9).astype(int)
     longest, cur = 0, 0
     for v in under.to_numpy():
@@ -89,7 +86,6 @@ def performance_stats(
 
 
 def monthly_return_table(returns: pd.Series) -> pd.DataFrame:
-    """Year by month grid of compounded returns, the standard tearsheet view."""
     r = pd.Series(returns).dropna()
     if not isinstance(r.index, pd.DatetimeIndex) or r.empty:
         return pd.DataFrame()

@@ -1,5 +1,3 @@
-"""Shared visual language for the research console."""
-
 from __future__ import annotations
 
 BG = "#0B1017"

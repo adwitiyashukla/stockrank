@@ -1,5 +1,3 @@
-"""Assemble figures and a written results document from a completed run."""
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,8 +15,8 @@ from stockrank.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-PCT = lambda x: "n/a" if x is None or not np.isfinite(x) else f"{100 * x:+.2f}%"  # noqa: E731
-NUM = lambda x, d=2: "n/a" if x is None or not np.isfinite(x) else f"{x:,.{d}f}"  # noqa: E731
+PCT = lambda x: "n/a" if x is None or not np.isfinite(x) else f"{100 * x:+.2f}%"
+NUM = lambda x, d=2: "n/a" if x is None or not np.isfinite(x) else f"{x:,.{d}f}"
 
 
 def _md_table(df: pd.DataFrame, floatfmt: str = "{:.4f}") -> str:
@@ -35,7 +33,6 @@ def _md_table(df: pd.DataFrame, floatfmt: str = "{:.4f}") -> str:
 
 
 def build_report(res, figures_dir: str | Path | None = None) -> Path:
-    """Generate every figure and write ``RESULTS.md`` next to the artifacts."""
     F.apply_style()
     cfg: Config = res.cfg
     art = Path(res.dir)
@@ -53,7 +50,7 @@ def build_report(res, figures_dir: str | Path | None = None) -> Path:
             b["date"] = pd.to_datetime(b["date"])
             bench_ret = b.set_index("date")["mkt_return"].reindex(idx).fillna(0.0)
             bench = (1 + bench_ret).cumprod()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("Benchmark curve unavailable: %s", exc)
 
     figs: dict[str, Path] = {}
@@ -106,9 +103,6 @@ def build_report(res, figures_dir: str | Path | None = None) -> Path:
 def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
     cfg: Config = res.cfg
     art = Path(res.dir)
-    # POSIX separators, always. On Windows a plain Path renders as
-    # "figures\baseline\x.png", which GitHub does not treat as an image path, so
-    # every figure in the committed report would silently fail to display.
     def rel(p) -> str:
         return (Path("figures") / cfg.run.name / Path(p).name).as_posix()
 
@@ -117,13 +111,9 @@ def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
 
     A(f"# Results: `{cfg.run.name}`\n")
     A(
-        "> Every number below is **out of sample**. Models are fitted on a trailing window "
-        "and scored on a later window they never saw, with the label horizon purged and an "
-        "embargo applied at the boundary. Returns are net of commission, slippage and short "
-        "financing.\n"
+        "All figures are out of sample, net of commission, slippage and short financing.\n"
     )
 
-    # ------------------------------------------------------------ 1. dataset
     ds = res.data_summary
     A("## 1. Dataset\n")
     A(f"- **Source**: {cfg.data.source}, universe `{cfg.data.universe}`")
@@ -133,9 +123,7 @@ def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
     if dl:
         A(
             f"- **Point-in-time coverage**: {dl.get('n_succeeded')} of {dl.get('n_requested')} "
-            f"historical index members priced ({100 * dl.get('coverage', 0):.1f}%). The remainder are "
-            "delistings and acquisitions that Yahoo Finance no longer serves; this residual "
-            "survivorship bias is discussed in section 8."
+            f"historical index members priced ({100 * dl.get('coverage', 0):.1f}%)"
         )
     fsum = res.feature_summary
     A(
@@ -144,13 +132,10 @@ def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
         f"{fsum.get('execution_lag_days')}-day execution lag\n"
     )
 
-    # ---------------------------------------------------- 2. forecast quality
     A("## 2. Forecast quality\n")
     A(
-        "The information coefficient is the daily cross-sectional Spearman correlation between "
-        "forecast and realised forward return. For daily equity signals, a mean IC of 0.02 to 0.04 "
-        "is the range that supports a real strategy; anything above 0.10 in a backtest of this type "
-        "is nearly always a leak.\n"
+        "IC is the daily cross-sectional Spearman correlation between forecast and realised "
+        "forward return.\n"
     )
     om = res.training.overall_metrics if res.training is not None else pd.DataFrame()
     if not om.empty:
@@ -167,15 +152,10 @@ def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
     if "ic_bar" in figs:
         A(f"![Information coefficient by model]({rel(figs['ic_bar'])})\n")
     if "folds" in figs:
-        A(
-            "Stability across folds matters more than the average. A signal that is strong in two "
-            "folds and negative in three is not a signal.\n"
-        )
         A(f"![IC by fold]({rel(figs['folds'])})\n")
     if "ladder" in figs:
         A(f"![Quantile ladder]({rel(figs['ladder'])})\n")
 
-    # ------------------------------------------------------- 3. backtest
     A("## 3. Strategy performance\n")
     A(
         f"Construction: {cfg.portfolio.method}, {cfg.portfolio.n_long} long and "
@@ -211,7 +191,6 @@ def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
     if "monthly" in figs:
         A(f"![Monthly returns]({rel(figs['monthly'])})\n")
 
-    # ------------------------------------------------ 4. is it actually real
     A("## 4. Is the result real?\n")
     sig = res.significance or {}
     if sig:
@@ -224,8 +203,7 @@ def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
             f"- **Deflated Sharpe Ratio**: {NUM(dsr.get('deflated_sharpe'), 3)}. "
             f"Observed annualised Sharpe {NUM(dsr.get('sharpe_annual'))}, versus a selection-adjusted "
             f"threshold of {NUM(dsr.get('sr_threshold_annual'))} implied by "
-            f"{dsr.get('n_trials')} effective trials. Values above 0.95 are conventionally treated as "
-            "evidence the result is not a product of the search."
+            f"{dsr.get('n_trials')} trials."
         )
         A(
             f"- **Stationary bootstrap 95% CI for the Sharpe**: "
@@ -234,8 +212,7 @@ def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
         )
         A(
             f"- **Probability of backtest overfitting** (CSCV over {pbo.get('n_strategies')} candidate "
-            f"strategies, {pbo.get('n_combinations')} splits): {NUM(pbo.get('pbo'), 3)}. Below 0.5 means "
-            "the in-sample winner tends to stay above median out of sample."
+            f"strategies, {pbo.get('n_combinations')} splits): {NUM(pbo.get('pbo'), 3)}."
         )
         if rnd:
             A(
@@ -245,9 +222,8 @@ def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
     if res.attribution:
         A("### Factor attribution\n")
         A(
-            "Regression of daily strategy excess returns on the Fama-French five factors plus "
-            "momentum, with Newey-West standard errors. The intercept is what is left after cheap "
-            "factor exposure is stripped out.\n"
+            "Daily strategy excess returns regressed on the Fama-French five factors plus "
+            "momentum, Newey-West standard errors.\n"
         )
         rows = []
         for m, a in res.attribution.items():
@@ -270,30 +246,25 @@ def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
     if "factors" in figs:
         A(f"![Factor exposures]({rel(figs['factors'])})\n")
 
-    # ------------------------------------------------------- 5. implementability
     A("## 5. Implementability\n")
     cap = pd.DataFrame(sig.get("capacity", []))
     if not cap.empty:
         A(
-            "Sharpe ratio as a function of the assumed one-way cost. The break-even point is the "
-            "honest test of whether a signal is tradable outside a simulation.\n"
+            "Sharpe as a function of the assumed one-way cost.\n"
         )
         A(_md_table(cap.rename(columns={"cost_bps": "cost (bp)", "ann_return": "ann. return", "sharpe": "Sharpe"}), "{:.3f}"))
     if "cost" in figs:
         A(f"![Cost sensitivity]({rel(figs['cost'])})\n")
 
-    # --------------------------------------------------------- 6. what drives it
     if "importance" in figs:
         A("## 6. What the model uses\n")
         A(f"![Feature importance]({rel(figs['importance'])})\n")
 
-    # ------------------------------------------------------- 7. volatility study
     if res.volatility is not None and not res.volatility.empty:
         A("## 7. Volatility forecasting study\n")
         A(
-            "Return levels are close to unpredictable; return variance is not. GARCH(1,1) with "
-            "Student-t errors, HAR-RV and RiskMetrics EWMA are compared out of sample using QLIKE, "
-            "which is robust to the fact that true variance is unobservable.\n"
+            "GARCH(1,1) with Student-t errors, HAR-RV and EWMA compared out of sample under "
+            "QLIKE.\n"
         )
         cols = [c for c in res.volatility.columns if c.startswith(("qlike_", "mse_"))]
         summary = res.volatility[cols].mean().to_frame("mean loss").reset_index()
@@ -302,28 +273,18 @@ def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
         if "vol" in figs:
             A(f"![Volatility models]({rel(figs['vol'])})\n")
 
-    # ------------------------------------------------------------ 8. limitations
     A("## 8. Limitations\n")
     A(
-        "Stated plainly, because a results document that lists none is not credible.\n\n"
-        f"1. **Residual survivorship bias.** Index membership is reconstructed point in time, but "
-        f"{100 * (1 - (dl.get('coverage', 1) if dl else 1)):.0f}% of historical members cannot be priced "
-        "because Yahoo Finance drops delisted securities. The surviving sample is therefore mildly "
-        "favourable, and the true out-of-sample edge is likely a little lower than reported.\n"
-        "2. **No market impact model.** Costs are linear in turnover. At institutional size, impact is "
-        "concave in participation rate and would bite harder than a flat basis-point charge.\n"
-        "3. **Close-to-close execution.** Fills are assumed at the closing price with a one-day lag. "
-        "Real execution against the close carries auction risk not modelled here.\n"
-        "4. **Price and volume data only.** No fundamentals, no analyst revisions, no short interest, "
-        "no options-implied information. Those are the natural next inputs.\n"
-        "5. **One market, one regime set.** US large caps only. The result should not be assumed to "
-        "transfer to small caps or non-US markets without re-testing.\n"
-        "6. **Multiple testing is bounded, not eliminated.** The deflated Sharpe ratio uses an "
-        "assumed trial count. Every configuration ever run adds to the true count, and human "
-        "judgement about which configurations to try is itself a form of fitting.\n"
+        f"1. About {100 * (1 - (dl.get('coverage', 1) if dl else 1)):.0f}% of historical index "
+        "members cannot be priced, so some survivorship bias remains.\n"
+        "2. Costs are linear in turnover, no market impact model.\n"
+        "3. Fills assumed at the close with a one-day lag.\n"
+        "4. Price and volume only, no fundamentals, revisions or short interest.\n"
+        "5. US large caps only.\n"
+        "6. The deflated Sharpe uses an assumed trial count, so multiple testing is bounded but "
+        "not eliminated.\n"
     )
 
-    # ------------------------------------------------------------ 9. reproduce
     A("## 9. Reproducing this run\n")
     A("```bash")
     A("pip install -e \".[all]\"")
@@ -343,8 +304,6 @@ def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
     ensure_dir(top.parent)
     top.write_text(body, encoding="utf-8")
 
-    # The artifacts copy sits two directories deeper, so its image links need the
-    # extra hops to resolve when the file is viewed on GitHub.
     out = art / "RESULTS.md"
     out.write_text(body.replace("](figures/", "](../../reports/figures/"), encoding="utf-8")
     logger.info("Report written to %s and %s", out, top)
@@ -352,7 +311,6 @@ def _write_markdown(res, figdir: Path, figs: dict[str, Path]) -> Path:
 
 
 def build_report_from_disk(cfg: Config) -> Path:
-    """Rebuild the report from saved artifacts without retraining."""
     from stockrank.backtest.engine import BacktestResult
     from stockrank.experiment import ExperimentResult
     from stockrank.models.trainer import TrainingResult

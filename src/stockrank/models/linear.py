@@ -1,13 +1,3 @@
-"""Regularised linear baselines.
-
-Every serious result needs a boring benchmark. If a gradient boosted tree with
-four hundred estimators cannot beat ridge regression on the same features, the
-extra machinery is decoration. Ridge is also the natural model here on statistical
-grounds: cross-sectionally normalised factor exposures are highly collinear and
-the true signal-to-noise ratio is tiny, which is precisely the regime where
-shrinkage beats flexibility.
-"""
-
 from __future__ import annotations
 
 import numpy as np
@@ -50,8 +40,6 @@ class ElasticNetForecaster(BaseForecaster):
         X = train[self.feature_names].to_numpy(dtype=np.float64)
         y = train[y_col].to_numpy(dtype=np.float64)
         ok = np.isfinite(y) & np.isfinite(X).all(axis=1)
-        # Targets are ~1e-2 in magnitude; scaling up keeps the L1 penalty in a
-        # sensible range without having to hand-tune alpha per horizon.
         self.y_scale_ = float(np.std(y[ok])) or 1.0
         self.model_ = ElasticNet(
             alpha=float(self.params.get("alpha", 0.001)),

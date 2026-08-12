@@ -1,6 +1,3 @@
-"""Shared fixtures. Every test runs on the synthetic simulator so the suite needs
-no network access and produces identical numbers on every machine."""
-
 from __future__ import annotations
 
 import numpy as np

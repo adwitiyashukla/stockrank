@@ -1,24 +1,3 @@
-"""Universe construction with approximate point-in-time S&P 500 membership.
-
-Survivorship bias is the single most common way a backtest lies to you. Taking
-today's index members and running them back fifteen years bakes in the knowledge
-that these firms survived, which inflates returns and flatters momentum in
-particular.
-
-This module reduces that bias by reconstructing membership historically:
-
-1. Scrape the current S&P 500 constituent table from Wikipedia.
-2. Scrape the "selected changes to the list" table, which records additions and
-   removals with dates.
-3. Walk backwards from today, undoing each change, to obtain the member set on
-   any past date.
-
-The residual limitation is honest and documented: Yahoo Finance rarely serves
-price history for names that were delisted or acquired, so some historically
-correct members cannot be priced. The loader reports the coverage ratio for every
-run so the reader can judge how much bias remains. See ``docs/METHODOLOGY.md``.
-"""
-
 from __future__ import annotations
 
 import io
@@ -34,7 +13,6 @@ logger = get_logger(__name__)
 
 WIKI_SP500 = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 
-# Yahoo uses a dash where the index uses a dot for share classes.
 _TICKER_FIXES = {"BRK.B": "BRK-B", "BF.B": "BF-B", "BF.A": "BF-A", "GEV": "GEV", "LEN.B": "LEN-B"}
 
 
@@ -45,7 +23,6 @@ def _clean_ticker(t: str) -> str:
 
 
 def fetch_sp500_tables(cache_dir: str | Path = "data/cache") -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Return ``(current_members, changes)``, cached to parquet after first fetch."""
     cache = ensure_dir(cache_dir)
     cur_p, chg_p = cache / "sp500_current.parquet", cache / "sp500_changes.parquet"
     if cur_p.exists() and chg_p.exists():
@@ -84,7 +61,6 @@ def fetch_sp500_tables(cache_dir: str | Path = "data/cache") -> tuple[pd.DataFra
     changes = changes.dropna(subset=["date"])
     for col in ("added", "removed"):
         changes[col] = changes[col].apply(lambda x: _clean_ticker(x) if pd.notna(x) else "")
-        # Wikipedia occasionally carries footnote debris in these cells.
         changes[col] = changes[col].where(
             changes[col].str.fullmatch(r"[A-Z][A-Z0-9-]{0,5}"), ""
         )
@@ -103,12 +79,6 @@ def build_pit_membership(
     cache_dir: str | Path = "data/cache",
     freq: str = "MS",
 ) -> pd.DataFrame:
-    """Approximate point-in-time membership as a long ``(date, ticker)`` frame.
-
-    Membership is snapshotted at ``freq`` (month start by default). Index changes
-    happen a handful of times a quarter, so monthly resolution loses essentially
-    nothing while keeping the object small.
-    """
     current, changes = fetch_sp500_tables(cache_dir)
     members = set(current["ticker"])
     snapshots: dict[pd.Timestamp, set[str]] = {}
@@ -120,14 +90,13 @@ def build_pit_membership(
     cursor = today
     idx = 0
     for snap in reversed(grid):
-        # Undo every change that happened after this snapshot date.
         while idx < len(changes) and changes.iloc[idx]["date"] > snap:
             row = changes.iloc[idx]
             added, removed = str(row["added"] or ""), str(row["removed"] or "")
             if added and added != "nan":
-                members.discard(added)  # it was not a member before it was added
+                members.discard(added)
             if removed and removed != "nan":
-                members.add(removed)  # it was a member before it was removed
+                members.add(removed)
             idx += 1
         snapshots[snap] = set(members)
         cursor = snap
@@ -152,13 +121,6 @@ def resolve_universe(
     cache_dir: str | Path = "data/cache",
     universe_file: str | Path | None = None,
 ) -> tuple[list[str], pd.DataFrame | None]:
-    """Return ``(tickers_to_download, pit_membership_or_None)``.
-
-    ``universe`` accepts:
-      * ``sp500_pit``  - point-in-time S&P 500 (recommended, least biased)
-      * ``sp500``      - current S&P 500 members only (survivorship biased)
-      * ``file``       - one ticker per line from ``universe_file``
-    """
     if universe == "file":
         if universe_file is None:
             raise ValueError("universe='file' requires universe_file")

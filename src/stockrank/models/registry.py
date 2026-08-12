@@ -1,5 +1,3 @@
-"""Name to constructor mapping so configs stay declarative."""
-
 from __future__ import annotations
 
 from stockrank.config import Config

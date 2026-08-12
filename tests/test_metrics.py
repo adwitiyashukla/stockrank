@@ -1,5 +1,3 @@
-"""Statistical machinery."""
-
 from __future__ import annotations
 
 import numpy as np
@@ -63,7 +61,6 @@ def test_newey_west_widens_with_autocorrelation():
     ar = iid.copy()
     for i in range(1, len(ar)):
         ar.iloc[i] = 0.7 * ar.iloc[i - 1] + iid.iloc[i]
-    # Positive serial correlation inflates the naive t; the HAC version corrects it.
     naive = ar.mean() / ar.std(ddof=1) * np.sqrt(len(ar))
     assert abs(newey_west_tstat(ar)) < abs(naive)
 
@@ -112,7 +109,6 @@ def test_ic_summary_handles_empty_input():
 
 
 def test_factor_composite_needs_no_training_data():
-    """The benchmark must be identical whether it 'sees' 10 rows or 100000."""
     from stockrank.config import Config
     from stockrank.models.registry import build_model
 
@@ -134,8 +130,8 @@ def test_factor_composite_signs_follow_the_literature():
     feats = ["mom_12_1", "ret_21", "vol_63", "beta_63", "amihud_illiq"]
     m = build_model("factor_composite", feats, Config())
     w = m.weights_
-    assert w["mom_12_1"] > 0        # momentum
-    assert w["ret_21"] < 0          # one-month reversal
-    assert w["vol_63"] < 0          # low-volatility anomaly
-    assert w["beta_63"] < 0         # betting against beta
-    assert w["amihud_illiq"] > 0    # illiquidity premium
+    assert w["mom_12_1"] > 0
+    assert w["ret_21"] < 0
+    assert w["vol_63"] < 0
+    assert w["beta_63"] < 0
+    assert w["amihud_illiq"] > 0

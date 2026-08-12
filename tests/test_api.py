@@ -1,9 +1,3 @@
-"""API contract tests.
-
-Skipped automatically when the optional API extras are absent, so the core suite
-still runs in a minimal environment.
-"""
-
 from __future__ import annotations
 
 import pytest

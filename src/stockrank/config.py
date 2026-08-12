@@ -1,9 +1,3 @@
-"""Typed configuration objects loaded from YAML.
-
-Every stage of the pipeline reads its parameters from here, so an experiment is
-fully described by a single config file plus a random seed.
-"""
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -21,20 +15,14 @@ class RunConfig(BaseModel):
 
 
 class DataConfig(BaseModel):
-    """Where the price panel comes from and how it is filtered.
-
-    ``source='yfinance'`` is the production path: real, split and dividend
-    adjusted daily bars. ``source='synthetic'`` exists only as a leakage-control
-    fixture and for offline CI, never as a headline result.
-    """
 
     source: Literal["yfinance", "synthetic", "stooq"] = "yfinance"
     universe: Literal["sp500_pit", "sp500", "file"] = "sp500_pit"
     universe_file: str | None = None
     start: str = "2010-01-01"
     end: str = "2025-06-30"
-    max_assets: int = 250          # liquidity-ranked cap; keeps memory inside a laptop budget
-    n_assets: int = 150            # synthetic simulator only
+    max_assets: int = 250
+    n_assets: int = 150
     cache_dir: str = "data/cache"
     min_price: float = 5.0
     min_history_days: int = 500
@@ -83,8 +71,8 @@ class LabelConfig(BaseModel):
         "forward_excess_return"
     )
     horizon: int = 5
-    neutralise_market: bool = False   # beta adjust the label as well as the book
-    scale_by_volatility: bool = False  # predict return / trailing vol instead of return
+    neutralise_market: bool = False
+    scale_by_volatility: bool = False
     triple_barrier: TripleBarrierConfig = Field(default_factory=TripleBarrierConfig)
 
 
@@ -128,7 +116,7 @@ class PortfolioConfig(BaseModel):
     gross_leverage: float = 2.0
     max_weight: float = 0.06
     dollar_neutral: bool = True
-    beta_neutral: bool = True     # a dollar-neutral book is NOT market neutral
+    beta_neutral: bool = True
     sector_neutral: bool = False
     vol_target_annual: float = 0.10
     vol_lookback_days: int = 63
@@ -180,7 +168,6 @@ class Config(BaseModel):
             yaml.safe_dump(self.model_dump(mode="json"), fh, sort_keys=False)
 
     def apply_smoke_overrides(self) -> Config:
-        """Shrink every expensive knob so CI can exercise the whole pipeline quickly."""
         cfg = self.model_copy(deep=True)
         cfg.run.name = f"{cfg.run.name}_smoke"
         cfg.data.n_assets = min(cfg.data.n_assets, 30)

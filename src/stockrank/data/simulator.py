@@ -1,50 +1,3 @@
-"""Synthetic equity market simulator with a known ground-truth alpha structure.
-
-Why this exists
----------------
-Two reasons, both practical.
-
-1. **Reproducibility.** Anyone who clones this repo can run the entire pipeline
-   with no API key, no rate limits and no network access, and get byte-identical
-   numbers. That makes CI meaningful and makes the results in ``RESULTS.md``
-   verifiable by a reader.
-
-2. **A test bed with ground truth.** Real markets do not tell you what the true
-   predictable component was, so you can never prove that a research pipeline is
-   free of look-ahead bias - you can only fail to find bias. Here the alpha is
-   planted by construction, so two things become checkable:
-
-   * with alpha planted, the pipeline must *recover* an information coefficient
-     close to the theoretical ceiling;
-   * with ``null_alpha: true`` the true predictable component is exactly zero, so
-     any out-of-sample information coefficient that is reliably non-zero is proof
-     of leakage somewhere in the code.
-
-The second experiment is the single most useful test in this repository.
-
-Generative model
-----------------
-Daily log returns follow a three-component factor structure::
-
-    r[i,t] = alpha[i,t] + beta[i] * r_mkt[t] + gamma[i] * r_sector[s(i),t] + e[i,t]
-
-where the market variance follows a GARCH(1,1) recursion with Student-t
-innovations (volatility clustering plus fat tails), idiosyncratic variances
-follow their own per-asset GARCH(1,1), and the planted alpha is a linear
-combination of three *lagged, observable* characteristics::
-
-    alpha[i,t] = (k_mom * z(mom12_1)[i,t-1]
-                  + k_rev * z(-ret5)[i,t-1]
-                  + k_lv  * z(-vol63)[i,t-1]) * sigma_idio[i]
-
-Because every characteristic is computed strictly from information available at
-``t-1``, the planted signal is genuinely predictable rather than contemporaneous.
-The strength coefficients are parameterised so that ``k_mom = 0.02`` means the
-momentum characteristic on its own carries an expected daily cross-sectional
-information coefficient of roughly 0.02, which is in the range reported for real
-equity factors.
-"""
-
 from __future__ import annotations
 
 import numpy as np
@@ -75,14 +28,12 @@ SECTOR_NAMES = [
 
 
 def _trading_calendar(start: str, end: str) -> pd.DatetimeIndex:
-    """Business days minus US federal holidays: a close stand-in for the NYSE calendar."""
     days = pd.bdate_range(start=start, end=end)
     holidays = USFederalHolidayCalendar().holidays(start=days.min(), end=days.max())
     return days.difference(pd.DatetimeIndex(holidays))
 
 
 def _make_tickers(n: int, rng: np.random.Generator) -> list[str]:
-    """Deterministic pronounceable 4-letter tickers, guaranteed unique."""
     seen: set[str] = set()
     out: list[str] = []
     while len(out) < n:
@@ -99,13 +50,11 @@ def _make_tickers(n: int, rng: np.random.Generator) -> list[str]:
 
 
 def _standardised_t(rng: np.random.Generator, df: int, size) -> np.ndarray:
-    """Student-t draws rescaled to unit variance so vol targeting stays interpretable."""
     raw = rng.standard_t(df, size=size)
     return raw / np.sqrt(df / (df - 2.0))
 
 
 def _xs_zscore(v: np.ndarray, valid: np.ndarray) -> np.ndarray:
-    """Cross-sectional z-score over the currently listed names only."""
     out = np.zeros_like(v)
     if valid.sum() < 5:
         return out
@@ -124,7 +73,6 @@ def _xs_zscore(v: np.ndarray, valid: np.ndarray) -> np.ndarray:
 
 
 class MarketSimulator:
-    """Generate a realistic unbalanced panel of daily equity bars."""
 
     def __init__(self, data_cfg: DataConfig, sim_cfg: SimulatorConfig, seed: int = 42) -> None:
         self.data_cfg = data_cfg
@@ -132,12 +80,10 @@ class MarketSimulator:
         self.seed = seed
         self.rng = np.random.default_rng(seed)
 
-    # ------------------------------------------------------------------ setup
     def _asset_parameters(self, n: int) -> dict[str, np.ndarray]:
         rng = self.rng
         beta = np.clip(rng.normal(1.0, 0.30, n), 0.25, 2.20)
         sector_load = np.clip(rng.normal(0.85, 0.25, n), 0.10, 1.80)
-        # Idiosyncratic vol is lognormal: a few names are much noisier than the median.
         idio_ann = self.sim.ann_idio_vol * np.exp(rng.normal(0.0, 0.35, n) - 0.5 * 0.35**2)
         idio_ann = np.clip(idio_ann, 0.08, 1.20)
         return {
@@ -148,13 +94,7 @@ class MarketSimulator:
             "base_volume": np.exp(rng.normal(14.0, 1.1, n)),
         }
 
-    # ------------------------------------------------------------- generation
     def generate(self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Return ``(panel, market)``.
-
-        ``panel`` is tidy long format with one row per (date, ticker).
-        ``market`` carries the market factor return and the risk-free rate.
-        """
         rng = self.rng
         dates = _trading_calendar(self.data_cfg.start, self.data_cfg.end)
         t_n = len(dates)
@@ -167,8 +107,6 @@ class MarketSimulator:
         sector_idx = rng.integers(0, n_sectors, n)
         params = self._asset_parameters(n)
 
-        # Staggered listings: ~25% of names appear after the sample starts, which
-        # forces every downstream stage to cope with an unbalanced panel.
         listing = np.zeros(n, dtype=int)
         late = rng.random(n) < 0.25
         listing[late] = rng.integers(1, max(2, int(t_n * 0.45)), late.sum())
@@ -176,7 +114,6 @@ class MarketSimulator:
         a, b = self.sim.garch_alpha, self.sim.garch_beta
         df_t = self.sim.student_t_df
 
-        # --- market factor: GARCH(1,1) with Student-t shocks ------------------
         mkt_var_uncond = (self.sim.ann_market_vol**2) / TRADING_DAYS
         omega_m = mkt_var_uncond * (1.0 - a - b)
         mkt_var = np.empty(t_n)
@@ -189,13 +126,11 @@ class MarketSimulator:
                 mkt_var[t] = omega_m + a * (mkt_ret[t - 1] - mkt_drift) ** 2 + b * mkt_var[t - 1]
             mkt_ret[t] = mkt_drift + np.sqrt(mkt_var[t]) * z_m[t]
 
-        # --- sector factors: constant-vol, mildly autocorrelated --------------
         sec_vol = 0.09 / np.sqrt(TRADING_DAYS)
         sec_ret = rng.normal(0.0, sec_vol, (t_n, n_sectors))
         for t in range(1, t_n):
             sec_ret[t] += 0.05 * sec_ret[t - 1]
 
-        # --- idiosyncratic GARCH state ---------------------------------------
         idio_var_uncond = params["idio_daily"] ** 2
         omega_i = idio_var_uncond * (1.0 - a - b)
         idio_var = idio_var_uncond.copy()
@@ -216,11 +151,10 @@ class MarketSimulator:
         for t in range(t_n):
             listed = listing <= t
 
-            # Characteristics use information through t-1 only.
             if t >= 253:
-                mom = cum[t - 22] - cum[t - 253]  # classic 12-1 momentum
-                rev = -(cum[t - 1] - cum[t - 6])  # 5-day short-term reversal
-                lv = -log_ret[t - 64 : t - 1].std(axis=0)  # low-volatility tilt
+                mom = cum[t - 22] - cum[t - 253]
+                rev = -(cum[t - 1] - cum[t - 6])
+                lv = -log_ret[t - 64 : t - 1].std(axis=0)
                 a_t = (
                     k_mom * _xs_zscore(mom, listed)
                     + k_rev * _xs_zscore(rev, listed)
@@ -249,7 +183,6 @@ class MarketSimulator:
 
         close = params["p0"] * np.exp(cum)
 
-        # --- OHLC and volume around the simulated closes ----------------------
         total_sd = np.sqrt(
             (params["beta"] * self.sim.ann_market_vol / np.sqrt(TRADING_DAYS)) ** 2 + vol_state**2
         )

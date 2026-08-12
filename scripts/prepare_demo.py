@@ -1,13 +1,3 @@
-"""Package a completed run as a small, committable demo bundle.
-
-The Streamlit console reads artifacts from disk. To deploy it on Streamlit
-Community Cloud, those artifacts have to live in the repository, so this script
-copies one run into ``demo_artifacts/`` and trims the only large file
-(``predictions.parquet``) to a recent window. Everything else is a few kilobytes.
-
-    python scripts/prepare_demo.py --run baseline --tail-days 900
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -55,8 +45,6 @@ def main() -> int:
         shutil.copy2(p, dst / p.name)
         copied += 1
 
-    # The serialised production model, so a clone can hit /score and /features
-    # without first running the pipeline.
     for pattern in ("model_*.txt", "model_*.json", "model_*.joblib"):
         for p in sorted(src.glob(pattern)):
             shutil.copy2(p, dst / p.name)

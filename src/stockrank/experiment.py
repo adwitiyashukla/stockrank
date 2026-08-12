@@ -1,17 +1,3 @@
-"""End-to-end orchestration: config in, artifacts out.
-
-Stages
-------
-1. Load and clean the market panel.
-2. Build features and labels.
-3. Walk-forward train every enabled model with purging and embargo.
-4. Backtest each model's out-of-sample signal with costs and constraints.
-5. Evaluate: performance, factor attribution, significance under multiple testing.
-6. Optionally run the econometric volatility study.
-7. Persist everything to ``artifacts/<run_name>/`` so the report and the dashboard
-   read from disk rather than recomputing.
-"""
-
 from __future__ import annotations
 
 import time
@@ -43,7 +29,6 @@ logger = get_logger(__name__)
 
 
 class ExperimentResult:
-    """Container for everything a run produced, plus its on-disk location."""
 
     def __init__(self, cfg: Config, artifact_dir: Path) -> None:
         self.cfg = cfg
@@ -67,14 +52,6 @@ def _benchmark_series(market: pd.DataFrame, index: pd.Index) -> pd.Series:
 
 
 def rerun_from_predictions(cfg: Config) -> ExperimentResult:
-    """Re-run backtest, evaluation and reporting from predictions already on disk.
-
-    Training is by far the most expensive stage and it does not depend on any
-    portfolio or cost assumption. Changing leverage, the volatility target, the
-    cost model or the rebalance rule should therefore not require refitting a
-    single model. This path makes those experiments cost seconds instead of
-    minutes, which matters because it removes the temptation to skip them.
-    """
     art = Path(cfg.run.artifacts_dir) / cfg.run.name
     pred_path = art / "predictions.parquet"
     if not pred_path.exists():
@@ -103,8 +80,6 @@ def rerun_from_predictions(cfg: Config) -> ExperimentResult:
     )
     logger.info("Reusing %d cached predictions from %s", len(preds), pred_path)
 
-    # Preserve the expensive stage timings from the original run so the reported
-    # end-to-end cost of the pipeline stays truthful.
     if (art / "timings.json").exists():
         previous = read_json(art / "timings.json")
         for k in ("data", "features", "training"):
@@ -113,21 +88,15 @@ def rerun_from_predictions(cfg: Config) -> ExperimentResult:
 
     md = load_market_data(cfg)
 
-    # Refresh the data summary from the reloaded panel. Older artifacts can be
-    # missing the download and coverage block, and that block carries the
-    # survivorship-bias evidence the report depends on.
     fresh = md.summary()
     for k, v in fresh.items():
         if k not in res.data_summary or k == "download" or not res.data_summary.get(k):
             res.data_summary[k] = v
     write_json(res.data_summary, art / "data_summary.json")
 
-    # Rebuilding the feature set costs about twenty seconds and keeps the served
-    # model in step with the evaluated one. Skipping it is how a serving artifact
-    # silently drifts from the research it claims to represent.
     try:
         fs = build_feature_set(md, cfg)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("Could not rebuild features (%s); production model left unchanged", exc)
         fs = None
 
@@ -148,21 +117,18 @@ def run_experiment(cfg: Config, smoke: bool = False) -> ExperimentResult:
     cfg.to_yaml(art / "config.yaml")
     t_start = time.time()
 
-    # ---------------------------------------------------------------- 1. data
     t0 = time.time()
     md = load_market_data(cfg)
     res.data_summary = md.summary()
     res.timings["data"] = time.time() - t0
     write_json(res.data_summary, art / "data_summary.json")
 
-    # ------------------------------------------------------------ 2. features
     t0 = time.time()
     fs = build_feature_set(md, cfg)
     res.feature_summary = fs.summary()
     res.timings["features"] = time.time() - t0
     write_json(res.feature_summary, art / "feature_summary.json")
 
-    # ------------------------------------------------------------ 3. training
     t0 = time.time()
     training = walk_forward_train(fs, cfg)
     res.training = training
@@ -188,10 +154,8 @@ def run_experiment(cfg: Config, smoke: bool = False) -> ExperimentResult:
 def _evaluate_and_persist(
     res: ExperimentResult, cfg: Config, md, art: Path, fs=None
 ) -> None:
-    """Stages 4 to 6: backtest, evaluate, explain, and write everything to disk."""
     training = res.training
     preds = training.predictions
-    # ------------------------------------------------------------ 4. backtest
     t0 = time.time()
     sectors = (
         preds.drop_duplicates("ticker").set_index("ticker")["sector"]
@@ -206,17 +170,15 @@ def _evaluate_and_persist(
                 sectors=sectors, daily_returns=daily_returns,
                 label_horizon=cfg.label.horizon,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception("Backtest failed for %s: %s", model, exc)
             continue
         res.backtests[model] = bt
         bt.to_frame().to_parquet(art / f"backtest_{model}.parquet")
 
-    # A long-only benchmark on the same calendar, for context.
     bench = _benchmark_series(md.market, next(iter(res.backtests.values())).returns.index) if res.backtests else pd.Series(dtype=float)
     res.timings["backtest"] = time.time() - t0
 
-    # ---------------------------------------------------------- 5. evaluation
     t0 = time.time()
     for model, bt in res.backtests.items():
         res.performance[model] = performance_stats(bt.returns, benchmark=bench)
@@ -247,7 +209,7 @@ def _evaluate_and_persist(
             res.significance["randomisation"] = randomisation_test(
                 preds, f"pred_{best}", n_permutations=100, seed=cfg.run.seed
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("Randomisation test failed: %s", exc)
 
         res.significance["capacity"] = turnover_capacity_analysis(
@@ -260,7 +222,6 @@ def _evaluate_and_persist(
                 res.attribution[model] = factor_regression(b.returns, md.factors)
             write_json(res.attribution, art / "attribution.json")
 
-        # Quantile ladders for the report.
         ladders = {}
         for model in training.model_names:
             qs = quantile_spread(
@@ -276,7 +237,6 @@ def _evaluate_and_persist(
             mt.to_csv(art / "monthly_returns.csv")
     res.timings["evaluation"] = time.time() - t0
 
-    # ------------------------------------------- 5b. explainability + serving
     t0 = time.time()
     try:
         if fs is None:
@@ -297,7 +257,6 @@ def _evaluate_and_persist(
                 sh.to_csv(art / "shap_summary.csv", index=False)
                 res.explanation = {"shap_top": sh.head(15).to_dict("records")}
 
-        # Are the same features important in every fold, or is it period-specific noise?
         by_model: dict[str, list] = {}
         for row in training.fold_metrics.to_dict("records"):
             by_model.setdefault(row["model"], [])
@@ -307,11 +266,10 @@ def _evaluate_and_persist(
                 or [training.importances["lightgbm"]]
             )
             res.significance["importance_stability"] = stab
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("Explainability / persistence step skipped: %s", exc)
     res.timings["explain"] = time.time() - t0
 
-    # ------------------------------------------------- 6. volatility study
     if cfg.volatility.max_assets_fitted > 0:
         t0 = time.time()
         try:
@@ -323,8 +281,6 @@ def _evaluate_and_persist(
                 refit_every=cfg.volatility.refit_every_days,
             )
             res.volatility.to_csv(art / "volatility_comparison.csv", index=False)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("Volatility study skipped: %s", exc)
         res.timings["volatility"] = time.time() - t0
-
-

@@ -1,13 +1,3 @@
-"""Which features carry signal, at which horizon, on the real data?
-
-Run this before committing to a modelling configuration. It computes the
-univariate information coefficient of every feature against forward returns at
-several horizons, with Newey-West t-statistics that account for the overlap
-induced by multi-day labels. Choosing a horizon by looking at this table is
-itself a form of selection, so the number of horizons tested is reported and fed
-into the deflated Sharpe ratio downstream.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -19,17 +9,17 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from stockrank.config import load_config  # noqa: E402
-from stockrank.data.loader import load_market_data  # noqa: E402
-from stockrank.evaluation.metrics import ic_summary, matrix_ic  # noqa: E402
-from stockrank.features.cross_section import normalise  # noqa: E402
-from stockrank.features.labels import (  # noqa: E402
+from stockrank.config import load_config
+from stockrank.data.loader import load_market_data
+from stockrank.evaluation.metrics import ic_summary, matrix_ic
+from stockrank.features.cross_section import normalise
+from stockrank.features.labels import (
     beta_adjusted_forward_return,
     cross_sectional_demean,
     forward_return,
 )
-from stockrank.features.technical import build_feature_matrices  # noqa: E402
-from stockrank.utils.logging import get_logger, setup_logging  # noqa: E402
+from stockrank.features.technical import build_feature_matrices
+from stockrank.utils.logging import get_logger, setup_logging
 
 logger = get_logger("diagnostics")
 
@@ -64,9 +54,6 @@ def main() -> int:
         targets = {
             "excess": cross_sectional_demean(fwd),
             "vol_scaled": cross_sectional_demean(fwd / realised_vol),
-            # The target the strategy actually trades: residual return after each
-            # name's beta times the market is removed, then cross-sectionally
-            # demeaned. Consistent with a dollar- and beta-neutral book.
             "beta_neutral": cross_sectional_demean(
                 beta_adjusted_forward_return(fwd, fwd_mkt.reindex(close.index), raw["beta_63"])
             ),

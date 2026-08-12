@@ -1,12 +1,3 @@
-"""Walk-forward training loop: the spine of the whole project.
-
-For each purged fold, every enabled model is fitted on the training window and
-scored on the untouched test window. Concatenating the test-window predictions
-gives one continuous out-of-sample track record per model, which is what the
-backtest and every statistic downstream consume. No model ever sees a single row
-from its own evaluation period.
-"""
-
 from __future__ import annotations
 
 import time
@@ -101,7 +92,7 @@ def walk_forward_train(fs: FeatureSet, cfg: Config) -> TrainingResult:
                     model.attach_tensor(shared_tensor)
                 model.fit(train)
                 preds = model.predict(test)
-            except Exception as exc:  # noqa: BLE001 - one broken model must not kill the run
+            except Exception as exc:
                 logger.exception("Model %s failed on fold %d: %s", name, fold.index, exc)
                 continue
             dt = time.time() - t0
@@ -128,7 +119,6 @@ def walk_forward_train(fs: FeatureSet, cfg: Config) -> TrainingResult:
     predictions = pd.concat(out_parts, ignore_index=True).sort_values(["date", "ticker"])
     predictions = predictions.reset_index(drop=True)
 
-    # Ensemble is formed on out-of-sample predictions only.
     if "ensemble" in cfg.models.enabled:
         members = cfg.models.ensemble.get("members") or enabled
         cols = {m: predictions[f"pred_{m}"].to_numpy() for m in members if f"pred_{m}" in predictions}

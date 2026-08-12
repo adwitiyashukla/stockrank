@@ -1,5 +1,3 @@
-"""Numerically defensive statistical helpers used across the codebase."""
-
 from __future__ import annotations
 
 import numpy as np
@@ -23,7 +21,6 @@ def zscore(s: pd.Series) -> pd.Series:
 
 
 def cross_sectional_rank(s: pd.Series) -> pd.Series:
-    """Rank into [-0.5, 0.5], robust to outliers and constant slices."""
     n = s.notna().sum()
     if n <= 1:
         return pd.Series(0.0, index=s.index)
@@ -72,7 +69,6 @@ def max_drawdown(equity: pd.Series) -> float:
 
 
 def newey_west_tstat(x: pd.Series, lags: int | None = None) -> float:
-    """t-statistic of the mean of x under HAC (Newey-West) standard errors."""
     v = x.dropna().to_numpy(dtype=float)
     n = v.size
     if n < 10:

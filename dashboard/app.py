@@ -1,12 +1,3 @@
-"""StockRank: interactive research console.
-
-Reads artifacts produced by ``python -m stockrank.cli run`` and presents them
-the way a research desk would review a signal: forecast quality first, strategy
-performance second, and the statistical case for believing any of it third.
-
-    streamlit run dashboard/app.py
-"""
-
 from __future__ import annotations
 
 import sys
@@ -19,9 +10,9 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-import charts  # noqa: E402
-from data_access import find_runs, load_all_predictions, load_run  # noqa: E402
-from theme import CSS, kpi_card  # noqa: E402
+import charts
+from data_access import find_runs, load_all_predictions, load_run
+from theme import CSS, kpi_card
 
 st.set_page_config(
     page_title="StockRank",
@@ -31,8 +22,8 @@ st.set_page_config(
 )
 st.markdown(CSS, unsafe_allow_html=True)
 
-PCT = lambda v, d=2: "n/a" if v is None or not np.isfinite(v) else f"{100 * v:+.{d}f}%"  # noqa: E731
-NUM = lambda v, d=2: "n/a" if v is None or not np.isfinite(v) else f"{v:,.{d}f}"  # noqa: E731
+PCT = lambda v, d=2: "n/a" if v is None or not np.isfinite(v) else f"{100 * v:+.{d}f}%"
+NUM = lambda v, d=2: "n/a" if v is None or not np.isfinite(v) else f"{v:,.{d}f}"
 
 
 def tone(v: float, good_high: bool = True) -> str:
@@ -43,7 +34,6 @@ def tone(v: float, good_high: bool = True) -> str:
     return "neg" if v > 0 else "pos"
 
 
-# --------------------------------------------------------------------- sidebar
 runs = find_runs()
 if not runs:
     st.markdown(
@@ -96,7 +86,6 @@ best = sig.get("best_model") or (selected[0] if selected else None)
 bts = run["backtests"]
 horizon = cfg.get("label", {}).get("horizon", 5)
 
-# ------------------------------------------------------------------------ hero
 n_names = ds.get("n_tickers", "?")
 n_feats = run.get("feature_summary", {}).get("n_features", "?")
 period = f"{ds.get('start', '?')} to {ds.get('end', '?')}"
@@ -125,7 +114,6 @@ tabs = st.tabs(
     ["Overview", "Signal quality", "Strategy", "Risk and significance", "Live screen", "Method"]
 )
 
-# =========================================================== TAB 1: OVERVIEW
 with tabs[0]:
     bp = perf.get(best, {}) if best else {}
     mm = run["model_metrics"]
@@ -183,7 +171,7 @@ with tabs[0]:
         st.markdown(
             f'<div class="callout warn"><b>Verdict: promising, not proven.</b> '
             f"The raw evidence is positive. Sharpe {NUM(sharpe_v)} with a Newey-West "
-            f"t-statistic of {NUM(bp.get('t_stat_nw'))}, a bootstrap P(Sharpe &le; 0) of "
+            f"t-statistic of {NUM(bp.get('t_stat_nw'))}, a bootstrap P(Sharpe &lt;= 0) of "
             f"{NUM(bs_p, 3)}, and a probability of backtest overfitting of {NUM(pbo_v, 3)}, "
             f"which is low enough to say the selection process is not simply fitting noise.<br><br>"
             f"Two things stop this being a claim of significance. The <b>deflated Sharpe of "
@@ -218,7 +206,6 @@ with tabs[0]:
         if not mm.empty:
             st.plotly_chart(charts.ic_bars(mm), width="stretch")
 
-# ==================================================== TAB 2: SIGNAL QUALITY
 with tabs[1]:
     st.markdown('<div class="section-title">How much does the model actually know?</div>', unsafe_allow_html=True)
     st.markdown(
@@ -273,7 +260,6 @@ with tabs[1]:
             width="stretch",
         )
 
-# ========================================================== TAB 3: STRATEGY
 with tabs[2]:
     pcfg = cfg.get("portfolio", {})
     bcfg = cfg.get("backtest", {})
@@ -316,7 +302,6 @@ with tabs[2]:
         if not mo.empty:
             st.plotly_chart(charts.monthly_heatmap(mo, best), width="stretch")
 
-# ============================================= TAB 4: RISK AND SIGNIFICANCE
 with tabs[3]:
     st.markdown('<div class="section-title">Is the result real?</div>', unsafe_allow_html=True)
     st.markdown(
@@ -395,7 +380,6 @@ with tabs[3]:
         )
         st.plotly_chart(charts.volatility_models(vol), width="stretch")
 
-# ======================================================= TAB 5: LIVE SCREEN
 with tabs[4]:
     st.markdown('<div class="section-title">Latest cross-sectional screen</div>', unsafe_allow_html=True)
     st.markdown(
@@ -444,7 +428,6 @@ with tabs[4]:
             "today.</div>", unsafe_allow_html=True,
         )
 
-# ========================================================== TAB 6: METHOD
 with tabs[5]:
     st.markdown('<div class="section-title">Dataset</div>', unsafe_allow_html=True)
     c = st.columns(4)

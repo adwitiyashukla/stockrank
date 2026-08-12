@@ -1,14 +1,3 @@
-"""Gradient boosted trees.
-
-Two deliberate choices worth defending:
-
-* **Huber objective.** Cross-sectional forward returns have fat tails; a squared
-  error loss lets a handful of earnings-gap observations dominate the fit.
-* **Large ``min_child_samples``.** With a signal-to-noise ratio around 2%, small
-  leaves are noise-fitting machines. Forcing hundreds of observations per leaf is
-  the single most effective regulariser in this setting.
-"""
-
 from __future__ import annotations
 
 import warnings
@@ -52,16 +41,11 @@ class LightGBMForecaster(BaseForecaster):
         ok = np.isfinite(y)
         X, y = X[ok], y[ok]
 
-        # Hold out the most recent slice of the training window for early
-        # stopping. It is still strictly in-sample relative to the test fold.
         n = len(y)
         cut = int(n * 0.85)
         self.model_ = lgb.LGBMRegressor(**params)
         if cut > 1000 and n - cut > 200:
             cbs = [lgb.early_stopping(40, verbose=False), lgb.log_evaluation(0)]
-            # LightGBM renamed the validation arguments across 4.x. Try the current
-            # spelling first and fall back, so the repository works on any recent
-            # version without pinning users to one.
             attempts = (
                 {"eval_X": X[cut:], "eval_y": y[cut:]},
                 {"eval_X": [X[cut:]], "eval_y": [y[cut:]]},
@@ -77,7 +61,7 @@ class LightGBMForecaster(BaseForecaster):
                     break
                 except TypeError:
                     continue
-            else:  # pragma: no cover - every signature rejected
+            else:
                 self.model_.fit(X, y)
             self.best_iteration_ = getattr(self.model_, "best_iteration_", None)
         else:

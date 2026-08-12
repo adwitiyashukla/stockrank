@@ -1,13 +1,3 @@
-"""Factor attribution: is this alpha, or repackaged beta?
-
-The question an allocator asks about any long/short equity strategy is whether it
-survives a regression on the standard factors. If a strategy's return is fully
-explained by loadings on market, size, value, profitability, investment and
-momentum, then it can be replicated with cheap index products and is not worth a
-fee. What matters is the intercept, and whether it stands up to HAC standard
-errors.
-"""
-
 from __future__ import annotations
 
 from typing import Any
@@ -23,7 +13,6 @@ FF_COLS = ["mkt_rf", "smb", "hml", "rmw", "cma", "mom"]
 def factor_regression(
     strategy_returns: pd.Series, factors: pd.DataFrame, hac_lags: int = 10
 ) -> dict[str, Any]:
-    """OLS of strategy excess returns on available factors with Newey-West errors."""
     import statsmodels.api as sm
 
     f = factors.copy()
@@ -63,7 +52,6 @@ def factor_regression(
 def exposure_over_time(
     strategy_returns: pd.Series, factors: pd.DataFrame, window: int = 252
 ) -> pd.DataFrame:
-    """Rolling factor betas, which reveal style drift a full-sample regression hides."""
     import statsmodels.api as sm
 
     f = factors.copy()
@@ -85,12 +73,6 @@ def exposure_over_time(
 def turnover_capacity_analysis(
     returns: pd.Series, turnover: pd.Series, cost_bps_grid: np.ndarray | None = None
 ) -> pd.DataFrame:
-    """Net Sharpe as a function of assumed round-trip cost.
-
-    The break-even cost is the single most informative number about whether a
-    strategy is implementable. A signal that needs sub-3bp execution is a
-    high-frequency shop's problem, not a research result.
-    """
     if cost_bps_grid is None:
         cost_bps_grid = np.array([0, 2, 5, 10, 15, 20, 30, 50])
 

@@ -1,18 +1,3 @@
-"""Real market data ingestion with an incremental on-disk cache.
-
-Design notes
-------------
-* Every ticker is cached to its own parquet file. A download that dies halfway
-  through 500 names resumes from where it stopped instead of starting over, which
-  matters a great deal on a laptop with a flaky connection.
-* Prices are split and dividend adjusted at source (``auto_adjust=True``), so the
-  ``close`` column is a total-return price series and simple percentage changes
-  are economically meaningful.
-* Failures are collected rather than raised. A universe of 500 names will always
-  contain a handful that Yahoo cannot serve, and the run reports the coverage
-  ratio instead of dying.
-"""
-
 from __future__ import annotations
 
 import time
@@ -29,7 +14,6 @@ _COLUMNS = ["open", "high", "low", "close", "volume"]
 
 
 class DownloadReport:
-    """Bookkeeping for a bulk download so the pipeline can report data quality."""
 
     def __init__(self) -> None:
         self.requested: list[str] = []
@@ -91,21 +75,17 @@ def download_prices(
     force_refresh: bool = False,
     pause: float = 0.4,
 ) -> tuple[pd.DataFrame, DownloadReport]:
-    """Download daily adjusted OHLCV for ``tickers`` from Yahoo Finance."""
     try:
         import yfinance as yf
-    except ImportError as exc:  # pragma: no cover - dependency guard
+    except ImportError as exc:
         raise ImportError(
             "yfinance is required for real market data. Install with: pip install -e '.[market]'"
         ) from exc
 
     cache = ensure_dir(Path(cache_dir) / "prices").parent
-    # yfinance keeps a shared sqlite timezone cache. With threaded batch downloads
-    # that database locks and healthy tickers get reported as delisted, so point it
-    # at a run-local directory.
     try:
         yf.set_tz_cache_location(str(ensure_dir(cache / "yf_tz")))
-    except Exception:  # noqa: BLE001 - older yfinance versions lack this helper
+    except Exception:
         pass
     report = DownloadReport()
     report.requested = list(tickers)
@@ -145,7 +125,7 @@ def download_prices(
                     group_by="column",
                 )
                 break
-            except Exception as exc:  # noqa: BLE001 - network is inherently flaky
+            except Exception as exc:
                 wait = 2.0 * (attempt + 1)
                 logger.warning("Batch %d attempt %d failed (%s); retrying in %.0fs", i, attempt + 1, exc, wait)
                 time.sleep(wait)
@@ -177,9 +157,6 @@ def download_prices(
         )
         time.sleep(pause)
 
-    # Second pass: retry failures one at a time without threading. Most "possibly
-    # delisted" errors in a threaded batch are transient rate limits, not real
-    # delistings, and this pass typically recovers the majority of them.
     if report.failed:
         retry = list(report.failed)
         logger.info("Retrying %d failed tickers individually", len(retry))
@@ -198,7 +175,7 @@ def download_prices(
                     threads=False,
                 )
                 df = _normalise_yf(raw, t)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 df = None
             if df is None:
                 report.failed.append(t)
@@ -237,7 +214,6 @@ def download_prices(
 def download_benchmark(
     symbol: str, start: str, end: str, cache_dir: str | Path = "data/cache"
 ) -> pd.DataFrame:
-    """Daily total-return series for a single benchmark symbol such as SPY."""
     panel, _ = download_prices([symbol], start, end, cache_dir=cache_dir)
     out = panel[["date", "close"]].rename(columns={"close": "benchmark_close"})
     out["mkt_return"] = out["benchmark_close"].pct_change()

@@ -60,3 +60,18 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 ignore = ["E501", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"dashboard/app.py" = ["E402", "E731"]
+"scripts/fetch_data.py" = ["E402"]
+"scripts/factor_diagnostics.py" = ["E402"]
+"src/stockrank/reporting/figures.py" = ["E402"]
+"src/stockrank/reporting/report.py" = ["E731"]
+
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+    "except ImportError",
+    "raise ImportError",
+    "def __repr__",
+]
