@@ -20,36 +20,62 @@ jobs:
     env:
       SPACE_ID: adwitiyashukla/stockrank
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      UA: "stockrank-keepalive/1.0 (+https://github.com/adwitiyashukla/stockrank)"
     steps:
       - name: Wake the Space and wait until it reports RUNNING
         run: |
           set -uo pipefail
 
-          auth=()
-          if [ -n "${HF_TOKEN:-}" ]; then
-            auth=(-H "Authorization: Bearer ${HF_TOKEN}")
-          fi
-
           api="https://huggingface.co/api/spaces/${SPACE_ID}"
 
-          info=$(curl -sS --max-time 30 "${auth[@]}" "$api")
-          host=$(printf '%s' "$info" | jq -r '
+          fetch_api() {
+            if [ -n "${HF_TOKEN:-}" ]; then
+              curl -sS -L --max-time 30 \
+                -H "User-Agent: ${UA}" \
+                -H "Accept: application/json" \
+                -H "Authorization: Bearer ${HF_TOKEN}" \
+                -w '\n%{http_code}' "$api"
+            else
+              curl -sS -L --max-time 30 \
+                -H "User-Agent: ${UA}" \
+                -H "Accept: application/json" \
+                -w '\n%{http_code}' "$api"
+            fi
+          }
+
+          resp=$(fetch_api)
+          code=$(printf '%s' "$resp" | tail -n 1)
+          body=$(printf '%s' "$resp" | sed '$d')
+
+          if [ "$code" != "200" ]; then
+            echo "::error::Hub API returned HTTP ${code} for ${SPACE_ID}"
+            echo "First 500 bytes of the response:"
+            printf '%s\n' "$body" | head -c 500
+            exit 1
+          fi
+
+          host=$(printf '%s' "$body" | jq -r '
             if .host then .host
             elif (.runtime.domains[0].domain // "") != "" then "https://" + .runtime.domains[0].domain
-            else "" end')
+            else "" end' 2>/dev/null)
 
-          if [ -z "$host" ]; then
-            echo "::error::Could not resolve a URL for ${SPACE_ID}. Check the owner and name."
-            printf '%s\n' "$info" | head -c 500
+          if [ -z "$host" ] || [ "$host" = "null" ]; then
+            echo "::error::Could not resolve a URL for ${SPACE_ID}."
+            echo "HTTP ${code}. First 500 bytes of the response:"
+            printf '%s\n' "$body" | head -c 500
             exit 1
           fi
           echo "Space URL: ${host}"
 
           for attempt in $(seq 1 20); do
-            curl -sS -o /dev/null --max-time 30 "$host" || true
+            curl -sS -L -o /dev/null --max-time 30 -H "User-Agent: ${UA}" "$host" || true
 
-            stage=$(curl -sS --max-time 30 "${auth[@]}" "$api" | jq -r '.runtime.stage // "UNKNOWN"')
-            echo "Attempt ${attempt}: stage=${stage}"
+            resp=$(fetch_api)
+            code=$(printf '%s' "$resp" | tail -n 1)
+            body=$(printf '%s' "$resp" | sed '$d')
+            stage=$(printf '%s' "$body" | jq -r '.runtime.stage // "UNKNOWN"' 2>/dev/null)
+            [ -z "$stage" ] && stage="UNKNOWN"
+            echo "Attempt ${attempt}: http=${code} stage=${stage}"
 
             case "$stage" in
               RUNNING|RUNNING_BUILDING)
@@ -79,4 +105,6 @@ jobs:
           done
 
           echo "::error::${SPACE_ID} did not reach RUNNING within about seven minutes."
+          echo "Last response, first 500 bytes:"
+          printf '%s\n' "$body" | head -c 500
           exit 1
