@@ -159,38 +159,30 @@ with tabs[0]:
     a_best = (run["attribution"] or {}).get(best, {})
     alpha_t = a_best.get("alpha_tstat_hac")
 
+    stats_line = (
+        f"Sharpe {NUM(sharpe_v)}, Newey-West t = {NUM(bp.get('t_stat_nw'))}, "
+        f"bootstrap P(Sharpe &lt;= 0) = {NUM(bs_p, 3)}, PBO {NUM(pbo_v, 3)}."
+    )
     if dsr_v > 0.95 and sharpe_v > 0:
         st.markdown(
-            f'<div class="callout good"><b>Verdict.</b> The best model clears the '
-            f"selection-adjusted threshold with a deflated Sharpe of {NUM(dsr_v, 3)} and a "
-            f"probability of backtest overfitting of {NUM(pbo_v, 3)}. The edge is small, as it "
-            f"should be, but it survives costs and the multiple-testing adjustment.</div>",
+            f'<div class="callout good"><b>Verdict: clears the bar.</b> {stats_line} '
+            f"Deflated Sharpe {NUM(dsr_v, 3)} is above 0.95, so the result survives costs and "
+            f"the adjustment for {dsr.get('n_trials', '?')} trials.</div>",
             unsafe_allow_html=True,
         )
     elif sharpe_v > 0.5:
         st.markdown(
-            f'<div class="callout warn"><b>Verdict: promising, not proven.</b> '
-            f"The raw evidence is positive. Sharpe {NUM(sharpe_v)} with a Newey-West "
-            f"t-statistic of {NUM(bp.get('t_stat_nw'))}, a bootstrap P(Sharpe &lt;= 0) of "
-            f"{NUM(bs_p, 3)}, and a probability of backtest overfitting of {NUM(pbo_v, 3)}, "
-            f"which is low enough to say the selection process is not simply fitting noise.<br><br>"
-            f"Two things stop this being a claim of significance. The <b>deflated Sharpe of "
-            f"{NUM(dsr_v, 3)}</b> is below the conventional 0.95: once the observed Sharpe is "
-            f"measured against the {dsr.get('n_trials', '?')} configurations that were tried, it "
-            f"sits only just above the threshold a worthless strategy would be expected to reach. "
-            f"And the six-factor alpha carries a t-statistic of {NUM(alpha_t)}, so a large part of "
-            f"the return is exposure that could be bought cheaply elsewhere.<br><br>"
-            f"Reporting that is the point. Price and volume features alone carry very little "
-            f"cross-sectional information in US large caps, and a research pipeline is only "
-            f"useful if it is capable of saying so.</div>",
+            f'<div class="callout warn"><b>Verdict: promising, not proven.</b> {stats_line} '
+            f"Deflated Sharpe {NUM(dsr_v, 3)} is below 0.95, so it does not clear multiple "
+            f"testing across {dsr.get('n_trials', '?')} trials. Six-factor alpha t = "
+            f"{NUM(alpha_t)} is not significant either. Price and volume alone carry little "
+            f"cross-sectional signal in US large caps.</div>",
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            f'<div class="callout warn"><b>Verdict.</b> The observed Sharpe of {NUM(sharpe_v)} '
-            f"does not support a tradable claim, and the deflated Sharpe of {NUM(dsr_v, 3)} "
-            f"confirms it. Reporting this rather than tuning until it looks good is the point: "
-            f"the value of the pipeline is that it can return a negative answer.</div>",
+            f'<div class="callout warn"><b>Verdict: no tradable edge.</b> {stats_line} '
+            f"Deflated Sharpe {NUM(dsr_v, 3)}.</div>",
             unsafe_allow_html=True,
         )
 
