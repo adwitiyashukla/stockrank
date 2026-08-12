@@ -1,18 +1,25 @@
 # Deployment
 
+## Hugging Face Space
+
+Live at <https://huggingface.co/spaces/adwitiyashukla/stockrank>.
+
+The Space is a separate git repo with its own remote at `https://huggingface.co/spaces/adwitiyashukla/stockrank`. It holds a copy of the dashboard plus `demo_artifacts/`, and reads pre-computed artifacts rather than refitting anything.
+
+The Streamlit SDK for Spaces is deprecated, so the Space uses `sdk: docker` with Streamlit pinned in its own Dockerfile. Port must match `app_port` in the README frontmatter, 7860 here.
+
+`predictions.parquet` is 15.8 MB, above the 10 MB threshold, so the Space tracks `*.parquet` with Git LFS.
+
+```bash
+cd stockrank-space
+git push origin main
+```
+
+Pushing triggers a rebuild. Username is the HF account, password is a write token from <https://huggingface.co/settings/tokens>.
+
 ## Streamlit Community Cloud
 
-Deployed at <https://stockrank.streamlit.app>.
-
-The dashboard renders artifacts from disk, so `demo_artifacts/` is committed for the hosted app to read.
-
-1. Push the repo to GitHub.
-2. Sign in at [share.streamlit.io](https://share.streamlit.io) with GitHub.
-3. Create app, deploy from GitHub, repository `adwitiyashukla/stockrank`, branch `main`, main file `dashboard/app.py`.
-
-Streamlit Cloud installs from `requirements.txt`, not `pyproject.toml`. It leaves out torch, shap and yfinance because the hosted app only reads pre-computed artifacts.
-
-Community Cloud allocates about 1 GB. `scripts/prepare_demo.py --tail-days 900` keeps `predictions.parquet` inside that.
+Also deployable there from `dashboard/app.py`, using the repo's own `requirements.txt`. Community Cloud allocates about 1 GB, and `scripts/prepare_demo.py --tail-days 900` keeps `predictions.parquet` inside that.
 
 ## Docker
 

@@ -5,8 +5,9 @@ Cross-sectional stock ranking on the S&P 500. Forecasts which stocks outperform 
 [![CI](https://github.com/adwitiyashukla/stockrank/actions/workflows/ci.yml/badge.svg)](https://github.com/adwitiyashukla/stockrank/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Hugging Face Space](https://img.shields.io/badge/demo-Hugging%20Face%20Space-blue.svg)](https://huggingface.co/spaces/adwitiyashukla/stockrank)
 
-Live demo: [stockrank.streamlit.app](https://stockrank.streamlit.app)
+Live demo: [huggingface.co/spaces/adwitiyashukla/stockrank](https://huggingface.co/spaces/adwitiyashukla/stockrank)
 
 ## Problem
 
