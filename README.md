@@ -1,6 +1,6 @@
 # StockRank
 
-Ranking S&P 500 stocks by how much they will beat each other over the next month, then turning that ranking into a market-neutral long/short portfolio and checking honestly whether the result is real.
+Ranking S&P 500 stocks by how much they will beat each other over the next month, then turning that ranking into a market-neutral long/short portfolio and testing whether the result actually holds up.
 
 [![CI](https://github.com/adwitiyashukla/stockrank/actions/workflows/ci.yml/badge.svg)](https://github.com/adwitiyashukla/stockrank/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
@@ -23,7 +23,7 @@ I used daily split- and dividend-adjusted OHLCV from Yahoo Finance, from 2010-01
 
 The part that took the most thought was survivorship bias. If I take today's S&P 500 list and run it back sixteen years, I am secretly telling the backtest which companies survived. Every one of those firms made it. The failures are missing, so returns look better than they were.
 
-To deal with this I rebuilt the index membership historically. I scraped the current constituents from Wikipedia, then scraped the table of additions and removals, then walked backwards through those changes undoing them one by one. That turned 503 current members into **813 distinct historical members**, including names like Alcoa, Aetna and Monsanto that are long gone from the index.
+To deal with this I rebuilt the index membership historically. I scraped the current constituents from Wikipedia, then scraped the table of additions and removals, then walked backwards through those changes undoing them one by one. That turned 503 current members into 813 distinct historical members, including names like Alcoa, Aetna and Monsanto that are long gone from the index.
 
 I could only price 647 of those 813, which is 79.6% coverage, because Yahoo drops most delisted and acquired tickers. So some bias remains and I report the exact coverage number on every run rather than hiding it. That felt more useful than pretending the problem was solved.
 
@@ -35,7 +35,7 @@ After filtering to the 250 most liquid names by median dollar volume I had 952,0
 
 I built 36 factors out of price and volume: momentum over several windows, volatility, trend and moving-average distances, RSI, MACD, liquidity, Amihud illiquidity, rolling CAPM beta and residual volatility.
 
-Every factor gets winsorised at 1% and z-scored **within each date**. This matters more than it sounds. A 3% move in a quiet utility and a 3% move in a volatile semiconductor are not the same event, and normalising across the cross-section each day is what makes them comparable.
+Every factor gets winsorised at 1% and z-scored within each date. This matters more than it sounds. A 3% move in a quiet utility and a 3% move in a volatile semiconductor are not the same event, and normalising across the cross-section each day is what makes them comparable.
 
 The label is the 21-day forward return, cross-sectionally demeaned, and entered one day after the signal. That one-day lag is deliberate. If I form a signal from Monday's close I cannot also trade at Monday's close, so the book goes on at Tuesday's close and the return is measured from there.
 
@@ -49,11 +49,15 @@ Mean absolute IC came out at 0.005 at one day and rose to 0.018 at 63 days. Long
 
 This is the part I learned the most from, so I am leaving it in.
 
-**A beta-adjusted target.** My first idea was to predict the return left over after subtracting each stock's market exposure, since my book was going to be market neutral anyway. It produced the strongest information coefficients in the whole study, `beta_63` at -0.084 with a t-statistic of -4.1, and I was pleased with myself for about an hour.
+### A beta-adjusted target
+
+My first idea was to predict the return left over after subtracting each stock's market exposure, since my book was going to be market neutral anyway. It produced the strongest information coefficients in the whole study, `beta_63` at -0.084 with a t-statistic of -4.1, and I was pleased with myself for about an hour.
 
 Then I worked out why. The rolling beta I subtract is an estimate, and estimation error in that beta is negatively correlated with the residual by construction. The model was not finding a signal, it was finding my own measurement error. And because I neutralise beta in the portfolio anyway, it could never have earned a rupee. I dropped the target.
 
-**A volatility-scaled target.** Dividing forward return by trailing volatility looked like a clean way to make the target risk-adjusted. It is also mechanically anti-correlated with every volatility factor I have, through its own denominator. The information coefficients went up and none of it was tradable. Dropped that too.
+### A volatility-scaled target
+
+Dividing forward return by trailing volatility looked like a clean way to make the target risk-adjusted. It is also mechanically anti-correlated with every volatility factor I have, through its own denominator. The information coefficients went up and none of it was tradable. Dropped that too.
 
 Both experiments are reproducible from the diagnostics script if anyone wants to check.
 
@@ -63,7 +67,7 @@ A 21-day label formed on the first of the month is still being realised at month
 
 So I used purged walk-forward cross-validation with 6 folds, a 22-day purge and a 21-day embargo. Purging drops training rows whose label window overlaps the test window at all, and the embargo adds a buffer after it. Every model only ever sees the past and is scored on the future.
 
-I wrote two tests to keep myself honest about this. One corrupts the last 60 days of the panel, rebuilds every feature, and asserts nothing stamped earlier moved. The other plants exactly zero alpha into a synthetic market and fails the build if any model finds signal in it. If I ever write a look-ahead bug, those tests break.
+I wrote two tests to catch myself if I ever get this wrong. One corrupts the last 60 days of the panel, rebuilds every feature, and asserts nothing stamped earlier moved. The other plants exactly zero alpha into a synthetic market and fails the build if any model finds signal in it. If I ever write a look-ahead bug, those tests break.
 
 ## The models
 
@@ -77,7 +81,7 @@ I wrote two tests to keep myself honest about this. One corrupts the last 60 day
 
 A prediction is not a portfolio, and this is where I made my worst mistake.
 
-I built a dollar-neutral book, 25 long and 25 short, equal money on each side. It lost 28% a year while having a **positive** information coefficient, which made no sense to me at first.
+I built a dollar-neutral book, 25 long and 25 short, equal money on each side. It lost 28% a year while having a positive information coefficient, which made no sense to me at first.
 
 The reason is that equal dollars long and short is not the same as market neutral. My model liked low-volatility names on the long side and high-beta names on the short side, so the book was carrying a large negative beta. In a rising market that loses money no matter how good the stock picking is.
 
@@ -102,24 +106,24 @@ Everything below is out of sample and net of costs.
 
 LightGBM came out best:
 
-- Deflated Sharpe **0.623**, against a selection-adjusted threshold of 0.94 for 60 trials
+- Deflated Sharpe 0.623, against a selection-adjusted threshold of 0.94 for 60 trials
 - Bootstrap 95% confidence interval for the Sharpe: [0.29, 1.83], with P(Sharpe <= 0) = 0.003
 - Probability of backtest overfitting 0.029, by CSCV
 - Fama-French six-factor alpha +6.23% a year, t = 1.67 under Newey-West errors, R-squared 0.180
 - Net beta is zero at every rebalance by construction. The full-sample regression beta against the index is 0.128, which is leftover estimation error in the rolling betas rather than a deliberate market bet
 - Break-even cost is roughly 55bp per unit of turnover
 
-### Reading this honestly
+### What the numbers actually say
 
 The raw numbers look good. Sharpe 1.06, a Newey-West t of 2.67, bootstrap probability of a non-positive Sharpe of 0.003, and a low overfitting probability.
 
-But two things stop me claiming I found something. The **deflated Sharpe of 0.623 is below the usual 0.95 bar**, which means once you account for the 60 configurations I tried, my Sharpe sits only a little above what a worthless strategy would be expected to reach just by searching. And the six-factor alpha carries a t-statistic of 1.67, which is not significant, so a good chunk of the return is factor exposure anyone can buy cheaply.
+But two things stop me claiming I found something. The deflated Sharpe of 0.623 is below the usual 0.95 bar, which means once you account for the 60 configurations I tried, my Sharpe sits only a little above what a worthless strategy would be expected to reach just by searching. And the six-factor alpha carries a t-statistic of 1.67, which is not significant, so a good chunk of the return is factor exposure anyone can buy cheaply.
 
 My conclusion is that price and volume alone carry very little cross-sectional information in US large caps. I would rather report that than tune the thing until the number looks impressive, and the whole point of building the statistical machinery was to be able to tell the difference.
 
 ### A bug that inflated the Sharpe by 4.58x
 
-Worth writing down because of how it was caught. My first backtest engine booked one lump return per 21-day holding period and spread it evenly across the days. Every statistic was then computed on that daily series, and LightGBM reported a Sharpe of **4.58** while its information coefficient was 0.013.
+Worth writing down because of how it was caught. My first backtest engine booked one lump return per 21-day holding period and spread it evenly across the days. Every statistic was then computed on that daily series, and LightGBM reported a Sharpe of 4.58 while its information coefficient was 0.013.
 
 Those two numbers cannot both be true, and noticing that is what found the bug. Spreading one period return across 21 identical days produces a series with almost no day-to-day variation, so the standard deviation is far too small, but annualising still multiplies by the square root of 252 as if those days were independent. The Sharpe gets inflated by roughly the square root of the holding period. The square root of 21 is 4.58. Dividing the reported 4.58 by 4.58 gives 1.0, which is what the fixed engine produces.
 
@@ -154,7 +158,7 @@ uvicorn stockrank.api.main:app --port 8000
 
 No API keys needed, everything comes from public sources. `make run-fast` uses a reduced config that finishes in about two minutes, and `make control` runs the two synthetic control experiments with no network at all.
 
-I built and ran all of this on a laptop with **8 GB of RAM and no GPU**. The full pipeline takes 9.2 minutes with the data cached. The sequence models read from one 146 MB feature tensor instead of materialising every training window separately, which is the thing that keeps a GRU trainable on a machine like mine.
+I built and ran all of this on a laptop with 8 GB of RAM and no GPU. The full pipeline takes 9.2 minutes with the data cached. The sequence models read from one 146 MB feature tensor instead of materialising every training window separately, which is the thing that keeps a GRU trainable on a machine like mine.
 
 ## What is in the repo
 
